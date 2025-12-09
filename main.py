@@ -145,7 +145,7 @@ async def main_async():
     USER_ID = customer_id.lower()
     
     # Create session
-    new_session = session_service.create_session(
+    new_session = await session_service.create_session(
         app_name=APP_NAME,
         user_id=USER_ID,
         state=initial_state,
@@ -186,11 +186,11 @@ async def main_async():
             
             # Handle status command
             if user_input.lower() == "status":
-                display_state(session_service, APP_NAME, USER_ID, SESSION_ID, "Application Status")
+                await display_state(session_service, APP_NAME, USER_ID, SESSION_ID, "Application Status")
                 continue
             
             # Add user query to history
-            add_user_query_to_history(
+            await add_user_query_to_history(
                 session_service, APP_NAME, USER_ID, SESSION_ID, user_input
             )
             
@@ -208,7 +208,7 @@ async def main_async():
     print(f"{Colors.YELLOW}SESSION SUMMARY{Colors.RESET}")
     print(f"{Colors.YELLOW}{'='*80}{Colors.RESET}")
     
-    final_session = session_service.get_session(
+    final_session = await session_service.get_session(
         app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
     )
     

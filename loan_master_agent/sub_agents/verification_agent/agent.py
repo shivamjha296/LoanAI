@@ -280,7 +280,7 @@ def get_update_instructions(document_type: str) -> str:
 # Create the Verification Agent
 verification_agent = Agent(
     name="verification_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash-lite",
     description="Verification agent that confirms KYC details (phone, address, identity) from CRM server",
     instruction="""
     You are a KYC Verification Agent for Tata Capital.

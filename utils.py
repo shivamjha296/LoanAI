@@ -34,7 +34,7 @@ class Colors:
     BG_WHITE = "\033[47m"
 
 
-def update_interaction_history(session_service, app_name, user_id, session_id, entry):
+async def update_interaction_history(session_service, app_name, user_id, session_id, entry):
     """Add an entry to the interaction history in state.
 
     Args:
@@ -45,7 +45,7 @@ def update_interaction_history(session_service, app_name, user_id, session_id, e
         entry: A dictionary containing the interaction data
     """
     try:
-        session = session_service.get_session(
+        session = await session_service.get_session(
             app_name=app_name, user_id=user_id, session_id=session_id
         )
 
@@ -56,22 +56,15 @@ def update_interaction_history(session_service, app_name, user_id, session_id, e
 
         interaction_history.append(entry)
 
-        updated_state = session.state.copy()
-        updated_state["interaction_history"] = interaction_history
-
-        session_service.create_session(
-            app_name=app_name,
-            user_id=user_id,
-            session_id=session_id,
-            state=updated_state,
-        )
+        # Update the state directly on the session object
+        session.state["interaction_history"] = interaction_history
     except Exception as e:
         print(f"Error updating interaction history: {e}")
 
 
-def add_user_query_to_history(session_service, app_name, user_id, session_id, query):
+async def add_user_query_to_history(session_service, app_name, user_id, session_id, query):
     """Add a user query to the interaction history."""
-    update_interaction_history(
+    await update_interaction_history(
         session_service,
         app_name,
         user_id,
@@ -83,11 +76,11 @@ def add_user_query_to_history(session_service, app_name, user_id, session_id, qu
     )
 
 
-def add_agent_response_to_history(
+async def add_agent_response_to_history(
     session_service, app_name, user_id, session_id, agent_name, response
 ):
     """Add an agent response to the interaction history."""
-    update_interaction_history(
+    await update_interaction_history(
         session_service,
         app_name,
         user_id,
@@ -100,12 +93,12 @@ def add_agent_response_to_history(
     )
 
 
-def display_state(
+async def display_state(
     session_service, app_name, user_id, session_id, label="Current State"
 ):
     """Display the current session state in a formatted way."""
     try:
-        session = session_service.get_session(
+        session = await session_service.get_session(
             app_name=app_name, user_id=user_id, session_id=session_id
         )
 
@@ -176,14 +169,19 @@ def display_welcome_banner():
 
 def display_customer_offer(customer):
     """Display pre-approved offer for the customer."""
+    name = f"{customer['name']:<58}"
+    limit = f"₹{customer['pre_approved_limit']:,}"
+    limit_padded = f"{limit:<48}"
+    score = f"{customer['credit_score']:<55}"
+    
     offer_display = f"""
 {Colors.BG_GREEN}{Colors.BLACK}{Colors.BOLD}
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                    🎉 EXCLUSIVE PRE-APPROVED OFFER 🎉                        │
 ├──────────────────────────────────────────────────────────────────────────────┤
-│  Customer: {customer['name']:<58} │
-│  Pre-approved Limit: ₹{customer['pre_approved_limit']:,:<47} │
-│  Credit Score: {customer['credit_score']:<55} │
+│  Customer: {name} │
+│  Pre-approved Limit: {limit_padded} │
+│  Credit Score: {score} │
 └──────────────────────────────────────────────────────────────────────────────┘
 {Colors.RESET}
 """
@@ -234,7 +232,7 @@ async def call_agent_async(runner, user_id, session_id, query, show_state=False)
     agent_name = None
 
     if show_state:
-        display_state(
+        await display_state(
             runner.session_service,
             runner.app_name,
             user_id,
@@ -256,7 +254,7 @@ async def call_agent_async(runner, user_id, session_id, query, show_state=False)
         print(f"{Colors.BG_RED}{Colors.WHITE}ERROR: {e}{Colors.RESET}")
 
     if final_response_text and agent_name:
-        add_agent_response_to_history(
+        await add_agent_response_to_history(
             runner.session_service,
             runner.app_name,
             user_id,

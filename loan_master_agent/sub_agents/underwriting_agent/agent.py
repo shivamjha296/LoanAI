@@ -439,7 +439,7 @@ def get_rejection_suggestions(reason: str) -> list:
 # Create the Underwriting Agent
 underwriting_agent = Agent(
     name="underwriting_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash-lite",
     description="Underwriting agent that evaluates credit score, validates eligibility, and approves/rejects loans",
     instruction="""
     You are an Underwriting Agent for Tata Capital.

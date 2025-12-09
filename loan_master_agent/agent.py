@@ -20,7 +20,7 @@ from .sub_agents.sanction_letter_agent.agent import sanction_letter_agent
 # Create the Master Loan Agent (Main Orchestrator)
 loan_master_agent = Agent(
     name="loan_master_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash-lite",
     description="Master Agent for Tata Capital Personal Loan Digital Sales Assistant",
     instruction="""
     You are the Master Agent (Digital Sales Assistant) for Tata Capital Personal Loans.
