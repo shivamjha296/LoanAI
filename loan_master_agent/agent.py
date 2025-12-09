@@ -10,6 +10,7 @@ This is the Master Agent that:
 """
 
 from google.adk.agents import Agent
+from google.adk.models.lite_llm import LiteLlm
 
 from .sub_agents.sales_agent.agent import sales_agent
 from .sub_agents.verification_agent.agent import verification_agent
@@ -20,7 +21,7 @@ from .sub_agents.sanction_letter_agent.agent import sanction_letter_agent
 # Create the Master Loan Agent (Main Orchestrator)
 loan_master_agent = Agent(
     name="loan_master_agent",
-    model="gemini-2.5-flash-lite",
+    model=LiteLlm(model="mistral/mistral-large-latest"),
     description="Master Agent for Tata Capital Personal Loan Digital Sales Assistant",
     instruction="""
     You are the Master Agent (Digital Sales Assistant) for Tata Capital Personal Loans.

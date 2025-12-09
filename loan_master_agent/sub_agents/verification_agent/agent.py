@@ -5,6 +5,7 @@ Confirms KYC details (phone, address, identity) from dummy CRM server
 
 from datetime import datetime
 from google.adk.agents import Agent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
 
 import sys
@@ -280,7 +281,7 @@ def get_update_instructions(document_type: str) -> str:
 # Create the Verification Agent
 verification_agent = Agent(
     name="verification_agent",
-    model="gemini-2.5-flash-lite",
+    model=LiteLlm(model="mistral/mistral-large-latest"),
     description="Verification agent that confirms KYC details (phone, address, identity) from CRM server",
     instruction="""
     You are a KYC Verification Agent for Tata Capital.

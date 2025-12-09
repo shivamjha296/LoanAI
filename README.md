@@ -135,14 +135,17 @@ project/
 
 2. **Install dependencies**
    ```bash
-   pip install google-adk python-dotenv
+   pip install google-adk python-dotenv litellm
    ```
 
 3. **Set up environment**
-   Create a `.env` file with your API key:
+   Create a `.env` file with your API keys:
    ```
    GOOGLE_API_KEY=your_gemini_api_key_here
+   MISTRAL_API_KEY=your_mistral_api_key_here
    ```
+
+   **Note:** This project uses Mistral AI's large language model via LiteLLM. Get your Mistral API key from [Mistral AI Console](https://console.mistral.ai/).
 
 ## 🚀 Usage
 
@@ -578,4 +581,4 @@ For any queries:
 
 ---
 
-**Built with Google ADK (Agent Development Kit) and Gemini AI**
+**Built with Google ADK (Agent Development Kit) and Mistral AI**

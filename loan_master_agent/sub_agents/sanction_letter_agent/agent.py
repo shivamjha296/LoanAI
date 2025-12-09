@@ -5,6 +5,7 @@ Generates automated PDF sanction letters for approved loans
 
 from datetime import datetime, timedelta
 from google.adk.agents import Agent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
 import os
 
@@ -459,7 +460,7 @@ def get_loan_summary(customer_id: str, tool_context: ToolContext) -> dict:
 # Create the Sanction Letter Agent
 sanction_letter_agent = Agent(
     name="sanction_letter_agent",
-    model="gemini-2.5-flash-lite",
+    model=LiteLlm(model="mistral/mistral-large-latest"),
     description="Agent that generates automated PDF sanction letters for approved loans",
     instruction="""
     You are the Sanction Letter Generator Agent for Tata Capital.

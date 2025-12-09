@@ -5,6 +5,7 @@ Fetches credit score, validates eligibility based on pre-approved limits, handle
 
 from datetime import datetime
 from google.adk.agents import Agent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
 
 import sys
@@ -439,7 +440,7 @@ def get_rejection_suggestions(reason: str) -> list:
 # Create the Underwriting Agent
 underwriting_agent = Agent(
     name="underwriting_agent",
-    model="gemini-2.5-flash-lite",
+    model=LiteLlm(model="mistral/mistral-large-latest"),
     description="Underwriting agent that evaluates credit score, validates eligibility, and approves/rejects loans",
     instruction="""
     You are an Underwriting Agent for Tata Capital.
