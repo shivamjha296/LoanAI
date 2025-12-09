@@ -234,7 +234,7 @@ def show_emi_comparison(
 # Create the Sales Agent
 sales_agent = Agent(
     name="sales_agent",
-    model=LiteLlm(model="mistral/mistral-large-latest"),
+    model=LiteLlm(model="mistral/mistral-large-2411"),
     description="Sales agent that negotiates loan terms, discusses customer needs, amount, tenure and interest rates",
     instruction="""
     You are a friendly and professional Sales Agent for Tata Capital Personal Loans.

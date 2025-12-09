@@ -145,7 +145,14 @@ project/
    MISTRAL_API_KEY=your_mistral_api_key_here
    ```
 
-   **Note:** This project uses Mistral AI's large language model via LiteLLM. Get your Mistral API key from [Mistral AI Console](https://console.mistral.ai/).
+   **Getting your Mistral API Key:**
+   - Visit [Mistral AI Console](https://console.mistral.ai/)
+   - Sign up or log in to your account
+   - Navigate to "API Keys" section
+   - Create a new API key
+   - Copy and paste it into your `.env` file
+   
+  **Note:** This project uses Mistral AI's `mistral-large-2411` model via LiteLLM for all agents (latest release per Mistral docs).
 
 ## 🚀 Usage
 

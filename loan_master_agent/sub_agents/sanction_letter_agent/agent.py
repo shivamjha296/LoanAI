@@ -460,7 +460,7 @@ def get_loan_summary(customer_id: str, tool_context: ToolContext) -> dict:
 # Create the Sanction Letter Agent
 sanction_letter_agent = Agent(
     name="sanction_letter_agent",
-    model=LiteLlm(model="mistral/mistral-large-latest"),
+    model=LiteLlm(model="mistral/mistral-large-2411"),
     description="Agent that generates automated PDF sanction letters for approved loans",
     instruction="""
     You are the Sanction Letter Generator Agent for Tata Capital.

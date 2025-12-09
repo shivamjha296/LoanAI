@@ -30,8 +30,21 @@ from utils import (
     Colors
 )
 
-# Load environment variables
-load_dotenv()
+# Load environment variables FIRST before importing agents
+load_dotenv(override=True)
+
+# Verify Mistral API key is set
+mistral_api_key = os.getenv('MISTRAL_API_KEY')
+if not mistral_api_key or mistral_api_key == 'your_mistral_api_key_here':
+    print(f"{Colors.RED}Error: MISTRAL_API_KEY not set in .env file{Colors.RESET}")
+    print(f"{Colors.YELLOW}Please add your Mistral API key to the .env file:{Colors.RESET}")
+    print(f"MISTRAL_API_KEY=your_actual_api_key")
+    print(f"{Colors.YELLOW}Get your API key from: https://console.mistral.ai/{Colors.RESET}")
+    sys.exit(1)
+
+# Enable LiteLLM debug mode if needed (uncomment to debug API issues)
+# import litellm
+# litellm.set_verbose = True
 
 
 def select_customer():
