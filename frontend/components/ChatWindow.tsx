@@ -4,12 +4,8 @@ import { Send, Bot, User, Loader2, Upload, Paperclip } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import AnimatedAvatar from './AnimatedAvatar';
-
-interface Message {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-    timestamp: Date;
-}
+import { Message } from '@/types';
+import { API_ENDPOINTS } from '@/lib/config';
 
 interface ChatWindowProps {
     sessionId: string;
@@ -23,11 +19,17 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
     const [isLoading, setIsLoading] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [showWelcome, setShowWelcome] = useState(true);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (scrollContainerRef.current) {
+            const { scrollHeight, clientHeight } = scrollContainerRef.current;
+            scrollContainerRef.current.scrollTo({
+                top: scrollHeight - clientHeight,
+                behavior: 'smooth'
+            });
+        }
     };
 
     useEffect(() => {
@@ -43,6 +45,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
         }
 
         const userMessage: Message = {
+            id: `${Date.now()}-${Math.random()}`,
             role: 'user',
             content: input,
             timestamp: new Date(),
@@ -53,13 +56,14 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
         setIsLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:8000/api/chat', {
+            const response = await axios.post(API_ENDPOINTS.chat, {
                 session_id: sessionId,
                 user_id: userId,
                 message: userMessage.content,
             });
 
             const assistantMessage: Message = {
+                id: `${Date.now()}-${Math.random()}`,
                 role: 'assistant',
                 content: response.data.response,
                 timestamp: new Date(),
@@ -70,8 +74,11 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
         } catch (error) {
             console.error('Error sending message:', error);
             const errorMessage: Message = {
+                id: `${Date.now()}-${Math.random()}`,
                 role: 'system',
-                content: "Sorry, I encountered an error. Please try again.",
+                content: axios.isAxiosError(error)
+                    ? `Connection error: ${error.message}. Please check your connection.`
+                    : "Sorry, I encountered an error. Please try again.",
                 timestamp: new Date(),
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -91,6 +98,34 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Validate file size (10MB limit)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSize) {
+            const errorMessage: Message = {
+                id: `${Date.now()}-${Math.random()}`,
+                role: 'system',
+                content: "File size exceeds 10MB limit. Please upload a smaller file.",
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, errorMessage]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        // Validate file type
+        const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        if (!validTypes.includes(file.type)) {
+            const errorMessage: Message = {
+                id: `${Date.now()}-${Math.random()}`,
+                role: 'system',
+                content: "Invalid file type. Please upload a PDF, JPG, or PNG file.",
+                timestamp: new Date(),
+            };
+            setMessages(prev => [...prev, errorMessage]);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
         setUploadingFile(true);
 
         try {
@@ -98,7 +133,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
             formData.append('file', file);
 
             const response = await axios.post(
-                `http://localhost:8000/api/upload-salary-slip?session_id=${sessionId}&user_id=${userId}`,
+                API_ENDPOINTS.uploadSalarySlip(sessionId, userId),
                 formData,
                 {
                     headers: {
@@ -109,8 +144,9 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
 
             // Automatically send message to agent about the uploaded file
             const uploadMessage = response.data.message || `I uploaded my salary slip at ${response.data.file_path}`;
-            
+
             const userMessage: Message = {
+                id: `${Date.now()}-${Math.random()}`,
                 role: 'user',
                 content: uploadMessage,
                 timestamp: new Date(),
@@ -119,13 +155,14 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
             setMessages(prev => [...prev, userMessage]);
 
             // Process the file with the agent
-            const chatResponse = await axios.post('http://localhost:8000/api/chat', {
+            const chatResponse = await axios.post(API_ENDPOINTS.chat, {
                 session_id: sessionId,
                 user_id: userId,
                 message: uploadMessage,
             });
 
             const assistantMessage: Message = {
+                id: `${Date.now()}-${Math.random()}`,
                 role: 'assistant',
                 content: chatResponse.data.response,
                 timestamp: new Date(),
@@ -136,8 +173,11 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
         } catch (error) {
             console.error('Error uploading file:', error);
             const errorMessage: Message = {
+                id: `${Date.now()}-${Math.random()}`,
                 role: 'system',
-                content: "Sorry, there was an error uploading your file. Please try again.",
+                content: axios.isAxiosError(error)
+                    ? `Upload failed: ${error.message}. Please try again.`
+                    : "Sorry, there was an error uploading your file. Please try again.",
                 timestamp: new Date(),
             };
             setMessages(prev => [...prev, errorMessage]);
@@ -150,7 +190,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
     };
 
     return (
-        <div className="flex flex-col h-[600px] bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
+        <div className="flex flex-col h-[75vh] min-h-[500px] bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
             {/* Chat Header */}
             <div className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-4 flex items-center gap-3 shadow-md">
                 <div className="relative">
@@ -166,16 +206,19 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white">
+            <div
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white scroll-smooth"
+            >
                 {/* Welcome Screen with Animated Avatar */}
                 {showWelcome && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full space-y-6 animate-fade-in">
                         <AnimatedAvatar size="lg" showGreeting={true} />
-                        
+
                         <div className="bg-white rounded-xl shadow-lg p-6 max-w-md border border-gray-100">
                             <p className="text-gray-700 leading-relaxed text-center">
-                                Welcome! I'm here to help you with your personal loan journey. 
-                                Whether you need funds for travel, medical expenses, weddings, or any other purpose, 
+                                Welcome! I'm here to help you with your personal loan journey.
+                                Whether you need funds for travel, medical expenses, weddings, or any other purpose,
                                 I'll guide you through every step.
                             </p>
                             <div className="mt-4 pt-4 border-t border-gray-100">
@@ -188,9 +231,9 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                 )}
 
                 {/* Chat Messages */}
-                {messages.map((msg, idx) => (
+                {messages.map((msg) => (
                     <div
-                        key={idx}
+                        key={msg.id}
                         className={clsx(
                             "flex gap-3 max-w-[80%]",
                             msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto"
@@ -225,7 +268,6 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
@@ -243,6 +285,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                         disabled={isLoading || uploadingFile}
                         className="bg-gray-100 text-gray-600 p-2 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Upload Salary Slip"
+                        aria-label="Upload Salary Slip"
                     >
                         {uploadingFile ? (
                             <Loader2 size={20} className="animate-spin" />
@@ -256,13 +299,15 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Type your message here..."
-                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tata-blue focus:border-transparent"
+                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tata-blue focus:border-transparent text-gray-900 placeholder-gray-500"
                         disabled={isLoading || uploadingFile}
+                        aria-label="Type your message"
                     />
                     <button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim() || uploadingFile}
                         className="bg-tata-red text-white p-2 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Send message"
                     >
                         <Send size={20} />
                     </button>

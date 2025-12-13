@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import Header from '@/components/Header';
@@ -9,33 +9,35 @@ import Footer from '@/components/Footer';
 import ChatWindow from '@/components/ChatWindow';
 import StatusPanel from '@/components/StatusPanel';
 import { Loader2 } from 'lucide-react';
+import { ApplicationState } from '@/types';
+import { API_ENDPOINTS } from '@/lib/config';
 
 function ChatContent() {
     const searchParams = useSearchParams();
     const sessionId = searchParams.get('session_id');
     const userId = searchParams.get('user_id');
 
-    const [state, setState] = useState<any>(null);
+    const [state, setState] = useState<ApplicationState | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchState = async () => {
+    const fetchState = useCallback(async () => {
         if (!sessionId || !userId) return;
         try {
-            const response = await axios.get(`http://localhost:8000/api/state/${sessionId}?user_id=${userId}`);
+            const response = await axios.get(API_ENDPOINTS.state(sessionId, userId));
             setState(response.data.state);
         } catch (error) {
             console.error('Error fetching state:', error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [sessionId, userId]);
 
     useEffect(() => {
         fetchState();
         // Poll for state updates every 5 seconds
         const interval = setInterval(fetchState, 5000);
         return () => clearInterval(interval);
-    }, [sessionId, userId]);
+    }, [fetchState]);
 
     if (!sessionId || !userId) {
         return <div className="p-8 text-center text-red-600">Invalid Session</div>;

@@ -1,24 +1,40 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { CheckCircle, Clock, AlertCircle, FileText, CreditCard, UserCheck, Download } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
+import { ApplicationState } from '@/types';
+import { API_ENDPOINTS } from '@/lib/config';
 
 interface StatusPanelProps {
-    state: any;
+    state: ApplicationState | null;
     sessionId?: string;
     userId?: string;
 }
 
 export default function StatusPanel({ state, sessionId, userId }: StatusPanelProps) {
-    if (!state) return null;
+    const [downloadError, setDownloadError] = useState<string | null>(null);
+    const [downloading, setDownloading] = useState(false);
+
+    if (!state) {
+        return (
+            <div className="bg-white rounded-lg shadow-lg p-6 h-full border border-gray-100">
+                <div className="flex items-center justify-center h-full text-gray-400">
+                    <p>Loading status...</p>
+                </div>
+            </div>
+        );
+    }
 
     const handleDownloadSanctionLetter = async () => {
         if (!sessionId || !userId) return;
         
+        setDownloading(true);
+        setDownloadError(null);
+        
         try {
             const response = await axios.get(
-                `http://localhost:8000/api/download-sanction-letter/${sessionId}?user_id=${userId}`,
+                API_ENDPOINTS.downloadSanctionLetter(sessionId, userId),
                 { responseType: 'blob' }
             );
             
@@ -30,9 +46,12 @@ export default function StatusPanel({ state, sessionId, userId }: StatusPanelPro
             document.body.appendChild(link);
             link.click();
             link.remove();
+            window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error downloading sanction letter:', error);
-            alert('Failed to download sanction letter. Please try again.');
+            setDownloadError('Failed to download sanction letter. Please try again.');
+        } finally {
+            setDownloading(false);
         }
     };
 
@@ -136,11 +155,25 @@ export default function StatusPanel({ state, sessionId, userId }: StatusPanelPro
                     </p>
                     <button 
                         onClick={handleDownloadSanctionLetter}
-                        className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 w-full"
+                        disabled={downloading}
+                        className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Download Sanction Letter"
                     >
-                        <Download size={16} />
-                        Download Sanction Letter
+                        {downloading ? (
+                            <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                                Downloading...
+                            </>
+                        ) : (
+                            <>
+                                <Download size={16} />
+                                Download Sanction Letter
+                            </>
+                        )}
                     </button>
+                    {downloadError && (
+                        <p className="text-red-600 text-xs mt-2">{downloadError}</p>
+                    )}
                 </div>
             )}
         </div>

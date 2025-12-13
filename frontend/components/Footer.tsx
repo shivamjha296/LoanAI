@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Facebook, Twitter, Linkedin, Instagram, Youtube } from 'lucide-react';
 
 export default function Footer() {
     return (
@@ -9,29 +10,29 @@ export default function Footer() {
                     <div>
                         <h3 className="text-lg font-bold mb-4 text-tata-blue">Products</h3>
                         <ul className="space-y-2 text-gray-400 text-sm">
-                            <li>Personal Loan</li>
-                            <li>Home Loan</li>
-                            <li>Business Loan</li>
-                            <li>Loan Against Property</li>
-                            <li>Used Car Loan</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Personal Loan</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Home Loan</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Business Loan</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Loan Against Property</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Used Car Loan</li>
                         </ul>
                     </div>
                     <div>
                         <h3 className="text-lg font-bold mb-4 text-tata-blue">Calculators</h3>
                         <ul className="space-y-2 text-gray-400 text-sm">
-                            <li>Personal Loan EMI Calculator</li>
-                            <li>Home Loan EMI Calculator</li>
-                            <li>Business Loan EMI Calculator</li>
-                            <li>Eligibility Calculator</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Personal Loan EMI Calculator</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Home Loan EMI Calculator</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Business Loan EMI Calculator</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Eligibility Calculator</li>
                         </ul>
                     </div>
                     <div>
                         <h3 className="text-lg font-bold mb-4 text-tata-blue">About Us</h3>
                         <ul className="space-y-2 text-gray-400 text-sm">
-                            <li>Overview</li>
-                            <li>Leadership</li>
-                            <li>Careers</li>
-                            <li>Contact Us</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Overview</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Leadership</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Careers</li>
+                            <li className="hover:text-white cursor-pointer transition-colors">Contact Us</li>
                         </ul>
                     </div>
                     <div>
@@ -39,12 +40,12 @@ export default function Footer() {
                         <p className="text-gray-400 text-sm mb-4">
                             Stay updated with our latest offers and news.
                         </p>
-                        <div className="flex gap-2">
-                            {/* Social icons placeholders */}
-                            <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
-                            <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
-                            <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
-                            <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
+                        <div className="flex gap-4">
+                            <a href="#" className="text-gray-400 hover:text-white transition-colors"><Facebook size={20} /></a>
+                            <a href="#" className="text-gray-400 hover:text-white transition-colors"><Twitter size={20} /></a>
+                            <a href="#" className="text-gray-400 hover:text-white transition-colors"><Linkedin size={20} /></a>
+                            <a href="#" className="text-gray-400 hover:text-white transition-colors"><Instagram size={20} /></a>
+                            <a href="#" className="text-gray-400 hover:text-white transition-colors"><Youtube size={20} /></a>
                         </div>
                     </div>
                 </div>

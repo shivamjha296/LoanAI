@@ -6,31 +6,27 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { User, CreditCard, MapPin, ArrowRight, Loader2 } from 'lucide-react';
+import { User, CreditCard, MapPin, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
-
-interface Customer {
-  id: string;
-  name: string;
-  city: string;
-  monthly_salary: number;
-  credit_score: number;
-  pre_approved_limit: number;
-}
+import { Customer } from '@/types';
+import { API_ENDPOINTS } from '@/lib/config';
 
 export default function Home() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/customers');
+        const response = await axios.get(API_ENDPOINTS.customers);
         setCustomers(response.data);
+        setError(null);
       } catch (error) {
         console.error('Error fetching customers:', error);
+        setError('Failed to load customers. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -42,13 +38,14 @@ export default function Home() {
   const handleSelectCustomer = async (customerId: string) => {
     setInitializing(customerId);
     try {
-      const response = await axios.post('http://localhost:8000/api/session', {
+      const response = await axios.post(API_ENDPOINTS.session, {
         customer_id: customerId,
       });
       const { session_id } = response.data;
       router.push(`/chat?session_id=${session_id}&user_id=${customerId.toLowerCase()}`);
     } catch (error) {
       console.error('Error initializing session:', error);
+      setError('Failed to start session. Please try again.');
       setInitializing(null);
     }
   };
@@ -70,6 +67,19 @@ export default function Home() {
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 size={48} className="animate-spin text-tata-blue" />
+          </div>
+        ) : error ? (
+          <div className="max-w-md mx-auto bg-red-50 border border-red-200 text-red-600 p-6 rounded-lg flex items-center gap-3">
+            <AlertCircle size={24} />
+            <div>
+              <p className="font-medium">{error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="text-sm underline mt-2"
+              >
+                Reload Page
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
