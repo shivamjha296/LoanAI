@@ -58,13 +58,14 @@ function ChatContent() {
                     sessionId={sessionId}
                     userId={userId}
                     onStateUpdate={fetchState}
+                    customerName={state?.customer_name}
                 />
             </div>
             <div className="lg:col-span-1">
-                <StatusPanel 
-                    state={state} 
-                    sessionId={sessionId} 
-                    userId={userId} 
+                <StatusPanel
+                    state={state}
+                    sessionId={sessionId}
+                    userId={userId}
                 />
             </div>
         </div>

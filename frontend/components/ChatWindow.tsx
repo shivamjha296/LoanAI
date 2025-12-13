@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, Upload, Paperclip } from 'lucide-react';
+import { Send, Bot, User, Loader2, Upload, Paperclip, Mic, MicOff, Volume2, VolumeX, Globe } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import AnimatedAvatar from './AnimatedAvatar';
@@ -11,16 +10,42 @@ interface ChatWindowProps {
     sessionId: string;
     userId: string;
     onStateUpdate: () => void;
+    customerName?: string;
 }
 
-export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWindowProps) {
+type Language = {
+    code: string;
+    name: string;
+    label: string;
+};
+
+const LANGUAGES: Language[] = [
+    { code: 'en-US', name: 'English', label: 'English' },
+    { code: 'hi-IN', name: 'Hindi', label: 'हिंदी' },
+    { code: 'mr-IN', name: 'Marathi', label: 'मराठी' },
+    { code: 'gu-IN', name: 'Gujarati', label: 'ગુજરાતી' },
+    { code: 'bn-IN', name: 'Bengali', label: 'বাংলা' },
+    { code: 'ta-IN', name: 'Tamil', label: 'தமிழ்' },
+    { code: 'te-IN', name: 'Telugu', label: 'తెలుగు' },
+    { code: 'kn-IN', name: 'Kannada', label: 'ಕನ್ನಡ' },
+    { code: 'ml-IN', name: 'Malayalam', label: 'മലയാളം' },
+];
+
+export default function ChatWindow({ sessionId, userId, onStateUpdate, customerName }: ChatWindowProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [uploadingFile, setUploadingFile] = useState(false);
     const [showWelcome, setShowWelcome] = useState(true);
+    const [selectedLanguage, setSelectedLanguage] = useState<Language>(LANGUAGES[0]);
+    const [isListening, setIsListening] = useState(false);
+    const [autoSpeak, setAutoSpeak] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const recognitionRef = useRef<any>(null);
+    const synthRef = useRef<SpeechSynthesis | null>(null);
 
     const scrollToBottom = () => {
         if (scrollContainerRef.current) {
@@ -35,6 +60,96 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    // Initialize Speech Synthesis
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            synthRef.current = window.speechSynthesis;
+        }
+    }, []);
+
+    // Initialize Speech Recognition
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = selectedLanguage.code;
+
+                recognition.onstart = () => setIsListening(true);
+                recognition.onend = () => setIsListening(false);
+                recognition.onerror = (event: any) => {
+                    console.error('Speech recognition error', event.error);
+                    setIsListening(false);
+                };
+                recognition.onresult = (event: any) => {
+                    const transcript = event.results[0][0].transcript;
+                    setInput(transcript);
+                    // Optional: Auto-send if confident? Better to let user review.
+                };
+
+                recognitionRef.current = recognition;
+            }
+        }
+    }, [selectedLanguage]);
+
+    const toggleListening = () => {
+        if (!recognitionRef.current) {
+            alert('Speech recognition is not supported in this browser.');
+            return;
+        }
+
+        if (isListening) {
+            recognitionRef.current.stop();
+        } else {
+            recognitionRef.current.start();
+        }
+    };
+
+    const speakText = (text: string) => {
+        if (!synthRef.current) return;
+
+        // Stop any current speaking
+        synthRef.current.cancel();
+
+        if (!autoSpeak && !isSpeaking) return; // Only speak if autoSpeak is on or manually triggered (logic below)
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = selectedLanguage.code;
+
+        // Try to find a voice matching the language
+        const voices = synthRef.current.getVoices();
+        const voice = voices.find(v => v.lang.includes(selectedLanguage.code.split('-')[0]));
+        if (voice) utterance.voice = voice;
+
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => setIsSpeaking(false);
+        utterance.onerror = () => setIsSpeaking(false);
+
+        synthRef.current.speak(utterance);
+    };
+
+    const stopSpeaking = () => {
+        if (synthRef.current) {
+            synthRef.current.cancel();
+            setIsSpeaking(false);
+        }
+    };
+
+    const toggleAutoSpeak = () => {
+        if (isSpeaking) stopSpeaking();
+        setAutoSpeak(!autoSpeak);
+    };
+
+    // Auto-speak new assistant messages
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        if (autoSpeak && lastMessage && lastMessage.role === 'assistant') {
+            speakText(lastMessage.content);
+        }
+    }, [messages, autoSpeak]);
 
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
@@ -60,6 +175,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                 session_id: sessionId,
                 user_id: userId,
                 message: userMessage.content,
+                language: selectedLanguage.name,
             });
 
             const assistantMessage: Message = {
@@ -159,6 +275,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                 session_id: sessionId,
                 user_id: userId,
                 message: uploadMessage,
+                language: selectedLanguage.name,
             });
 
             const assistantMessage: Message = {
@@ -192,16 +309,56 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
     return (
         <div className="flex flex-col h-[75vh] min-h-[500px] bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
             {/* Chat Header */}
-            <div className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-4 flex items-center gap-3 shadow-md">
-                <div className="relative">
-                    <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
-                        <Bot size={24} />
+            <div className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-4 flex items-center justify-between shadow-md">
+                <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
+                            <Bot size={24} />
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
                     </div>
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
+                    <div>
+                        <h3 className="font-bold text-lg">Priya Sharma (AI Agent)</h3>
+                        <p className="text-xs text-blue-100">
+                            {customerName ? `Helping ${customerName}` : 'Your Loan Manager'} • Online
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3 className="font-bold text-lg">Priya Sharma</h3>
-                    <p className="text-xs text-blue-100">Your Loan Manager • Online</p>
+
+                {/* Language & Voice Controls */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={toggleAutoSpeak}
+                        className={clsx(
+                            "p-2 rounded-full transition-colors",
+                            autoSpeak ? "bg-white/20 text-white" : "text-blue-100 hover:bg-white/10"
+                        )}
+                        title={autoSpeak ? "Turn off text-to-speech" : "Turn on text-to-speech"}
+                    >
+                        {autoSpeak ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                    </button>
+
+                    <div className="relative group">
+                        <button className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full transition-colors text-sm">
+                            <Globe size={16} />
+                            <span>{selectedLanguage.label}</span>
+                        </button>
+
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 py-1 hidden group-hover:block z-20">
+                            {LANGUAGES.map((lang) => (
+                                <button
+                                    key={lang.code}
+                                    onClick={() => setSelectedLanguage(lang)}
+                                    className={clsx(
+                                        "w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors",
+                                        selectedLanguage.code === lang.code ? "text-tata-blue font-bold bg-blue-50" : "text-gray-700"
+                                    )}
+                                >
+                                    {lang.name} ({lang.label})
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -254,6 +411,15 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                                     : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
                         )}>
                             {msg.content}
+                            {msg.role === 'assistant' && (
+                                <button
+                                    onClick={() => speakText(msg.content)}
+                                    className="ml-2 inline-block opacity-50 hover:opacity-100 transition-opacity"
+                                    title="Read aloud"
+                                >
+                                    <Volume2 size={14} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}
@@ -293,16 +459,31 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                             <Paperclip size={20} />
                         )}
                     </button>
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Type your message here..."
-                        className="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-tata-blue focus:border-transparent text-gray-900 placeholder-gray-500"
-                        disabled={isLoading || uploadingFile}
-                        aria-label="Type your message"
-                    />
+
+                    <div className="flex-1 relative">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={`Type your message in ${selectedLanguage.name}...`}
+                            className="w-full border border-gray-300 rounded-md pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-tata-blue focus:border-transparent text-gray-900 placeholder-gray-500"
+                            disabled={isLoading || uploadingFile}
+                            aria-label="Type your message"
+                        />
+                        <button
+                            onClick={toggleListening}
+                            className={clsx(
+                                "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors",
+                                isListening ? "bg-red-100 text-red-600 animate-pulse" : "text-gray-400 hover:text-tata-blue"
+                            )}
+                            title={isListening ? "Stop listening" : "Start voice input"}
+                            disabled={isLoading || uploadingFile}
+                        >
+                            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                        </button>
+                    </div>
+
                     <button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim() || uploadingFile}
@@ -314,6 +495,9 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate }: ChatWin
                 </div>
                 {uploadingFile && (
                     <p className="text-xs text-gray-500 mt-2">Uploading file...</p>
+                )}
+                {isListening && (
+                    <p className="text-xs text-tata-blue mt-2 animate-pulse">Listening ({selectedLanguage.name})...</p>
                 )}
             </div>
         </div>
