@@ -59,9 +59,121 @@ class ChatRequest(BaseModel):
     message: str
     language: Optional[str] = "English"
 
-# ... (StateResponse and get_initial_state remain unchanged)
+class ChatResponse(BaseModel):
+    response: str
+    agent: str
+    session_id: str
 
-# ... (get_customers, create_session, get_state remain unchanged)
+class StateResponse(BaseModel):
+    state: Dict[str, Any]
+
+@app.get("/api/customers")
+async def get_customers():
+    """Get all available customers."""
+    return [
+        {
+            "id": customer_data["customer_id"],
+            "name": customer_data["name"],
+            "city": customer_data["city"],
+            "monthly_salary": customer_data["monthly_salary"],
+            "credit_score": customer_data["credit_score"],
+            "pre_approved_limit": customer_data["pre_approved_limit"]
+        }
+        for customer_id, customer_data in CUSTOMERS.items()
+    ]
+
+@app.post("/api/init-session")
+async def create_session(request: SessionInitRequest):
+    """Initialize a new chat session for a customer."""
+    try:
+        customer = get_customer_by_id(request.customer_id)
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+        
+        # Generate session ID
+        session_id = f"session_{request.customer_id}_{int(asyncio.get_event_loop().time())}"
+        
+        # Get campaign data and offers
+        campaign_data = get_campaign_data(request.customer_id)
+        offers = get_pre_approved_offer(request.customer_id)
+        
+        # Get personalized opening
+        personalized_opening = get_personalized_opening(
+            request.customer_id,
+            customer["name"],
+            campaign_data
+        )
+        
+        # Create initial state with parallel processing pre-fetch
+        from mock_data.crm_data import get_kyc_data
+        from mock_data.credit_bureau import get_credit_score
+        
+        # Pre-fetch data in parallel
+        kyc_data = get_kyc_data(request.customer_id)
+        credit_data = get_credit_score(request.customer_id)
+        
+        initial_state = {
+            "customer_id": request.customer_id,
+            "customer_name": customer["name"],
+            "customer_phone": customer.get("phone", "N/A"),
+            "customer_city": customer["city"],
+            "customer_salary": customer["monthly_salary"],
+            "pre_approved_limit": customer["pre_approved_limit"],
+            "credit_score": customer["credit_score"],
+            "current_offer": offers.get("offer_1", {}),
+            "loan_application": {},
+            "application_status": "NOT_STARTED",
+            "interaction_history": [],
+            "campaign_source": campaign_data.get("source", "Direct"),
+            "customer_intent": campaign_data.get("intent", "GENERAL"),
+            "urgency_level": campaign_data.get("urgency_level", "MEDIUM"),
+            "campaign_keyword": campaign_data.get("keyword", "personal loan"),
+            "customer_type": campaign_data.get("customer_type", "NEW_CUSTOMER"),
+            "relationship_tenure_years": campaign_data.get("relationship_tenure_years", 0),
+            "payment_history": campaign_data.get("payment_history", "N/A"),
+            "current_loans_count": campaign_data.get("current_loans_count", 0),
+            "previous_interactions_count": campaign_data.get("previous_interactions_count", 0),
+            "offer_expiry_hours": campaign_data.get("offer_expiry_hours", 120),
+            "persuasion_strategy": "",
+            "personalized_opening": personalized_opening,
+            "objection_handling_context": "",
+            "sentiment_adaptive_strategy": "",
+            "history": [],
+            "_prefetched_kyc": kyc_data,
+            "_prefetched_credit": credit_data,
+            "_parallel_processing_enabled": True,
+        }
+        
+        # Create session
+        await session_service.create_session(
+            app_name=APP_NAME,
+            user_id=request.customer_id,
+            session_id=session_id,
+            initial_state=initial_state
+        )
+        
+        return {
+            "session_id": session_id,
+            "customer_id": request.customer_id,
+            "customer_name": customer["name"],
+            "greeting": personalized_opening
+        }
+    except Exception as e:
+        print(f"Error creating session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/state/{session_id}")
+async def get_state(session_id: str, user_id: str):
+    """Get current session state."""
+    try:
+        session = await session_service.get_session(
+            app_name=APP_NAME,
+            user_id=user_id,
+            session_id=session_id
+        )
+        return StateResponse(state=session.state)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -100,9 +212,17 @@ async def chat(request: ChatRequest):
                     final_response_text = event.content.parts[0].text.strip()
         
         if not final_response_text:
-            return ChatResponse(response="I'm sorry, I didn't get that. Could you please repeat?", agent="System")
+            return ChatResponse(
+                response="I'm sorry, I didn't get that. Could you please repeat?",
+                agent="System",
+                session_id=request.session_id
+            )
             
-        return ChatResponse(response=final_response_text, agent=agent_name)
+        return ChatResponse(
+            response=final_response_text,
+            agent=agent_name,
+            session_id=request.session_id
+        )
         
     except Exception as e:
         print(f"Error in chat processing: {e}")
