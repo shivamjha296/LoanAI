@@ -149,7 +149,7 @@ async def create_session(request: SessionInitRequest):
             app_name=APP_NAME,
             user_id=request.customer_id,
             session_id=session_id,
-            initial_state=initial_state
+            state=initial_state
         )
         
         return {
@@ -171,8 +171,14 @@ async def get_state(session_id: str, user_id: str):
             user_id=user_id,
             session_id=session_id
         )
-        return StateResponse(state=session.state)
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        return {"state": session.state if hasattr(session, 'state') else {}}
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"Error fetching state: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat", response_model=ChatResponse)

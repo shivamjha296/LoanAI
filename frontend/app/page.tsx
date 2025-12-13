@@ -42,8 +42,9 @@ export default function Home() {
       const response = await axios.post(API_ENDPOINTS.session, {
         customer_id: customerId,
       });
-      const { session_id } = response.data;
-      router.push(`/chat?session_id=${session_id}&user_id=${customerId.toLowerCase()}`);
+      const { session_id, customer_id } = response.data;
+      // Use the customer_id returned from backend to ensure case consistency
+      router.push(`/chat?session_id=${session_id}&user_id=${customer_id || customerId}`);
     } catch (error) {
       console.error('Error initializing session:', error);
       setError('Failed to start session. Please try again.');
