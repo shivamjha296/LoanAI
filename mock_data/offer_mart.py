@@ -9,40 +9,55 @@ LOAN_OFFERS = {
     "CUST001": {
         "customer_id": "CUST001",
         "customer_name": "Rajesh Kumar",
-        "pre_approved_amount": 500000,
-        "max_tenure_months": 60,
+        "pre_approved_amount": 700000,
+        "max_tenure_months": 72,
         "interest_rate": 11.5,
-        "processing_fee_percent": 1.5,
+        "processing_fee_percent": 3.5,
         "offer_valid_until": "2025-03-31",
         "offer_type": "PRE_APPROVED",
         "special_offer": False,
-        "min_loan_amount": 50000
+        "min_loan_amount": 50000,
+        "max_loan_amount": 3500000,
+        "is_existing_customer": True,
+        "repayment_history": "EXCELLENT",
+        "top_up_eligible": True,
+        "top_up_limit": 300000
     },
     "CUST002": {
         "customer_id": "CUST002",
         "customer_name": "Priya Sharma",
-        "pre_approved_amount": 750000,
-        "max_tenure_months": 60,
-        "interest_rate": 10.75,
-        "processing_fee_percent": 1.0,
+        "pre_approved_amount": 1000000,
+        "max_tenure_months": 72,
+        "interest_rate": 10.99,
+        "processing_fee_percent": 3.5,
         "offer_valid_until": "2025-03-31",
         "offer_type": "PRE_APPROVED",
         "special_offer": True,
-        "special_offer_details": "Zero processing fee for first-time borrowers",
-        "min_loan_amount": 50000
+        "special_offer_details": "Processing fee starting 0.5% for women borrowers",
+        "min_loan_amount": 50000,
+        "max_loan_amount": 3500000,
+        "is_existing_customer": False,
+        "repayment_history": "NEW",
+        "top_up_eligible": False,
+        "top_up_limit": 0
     },
     "CUST003": {
         "customer_id": "CUST003",
         "customer_name": "Amit Patel",
-        "pre_approved_amount": 1000000,
+        "pre_approved_amount": 1500000,
         "max_tenure_months": 72,
-        "interest_rate": 11.0,
-        "processing_fee_percent": 1.5,
+        "interest_rate": 11.99,
+        "processing_fee_percent": 3.5,
         "offer_valid_until": "2025-03-31",
         "offer_type": "PRE_APPROVED",
         "special_offer": True,
         "special_offer_details": "Business owner special - Flexible EMI options",
-        "min_loan_amount": 100000
+        "min_loan_amount": 100000,
+        "max_loan_amount": 3500000,
+        "is_existing_customer": True,
+        "repayment_history": "GOOD",
+        "top_up_eligible": True,
+        "top_up_limit": 500000
     },
     "CUST004": {
         "customer_id": "CUST004",
@@ -315,4 +330,112 @@ def get_available_tenures(customer_id: str) -> dict:
         "status": "success",
         "available_tenures": available_tenures,
         "max_tenure_months": max_tenure
+    }
+
+
+def check_top_up_eligibility(customer_id: str) -> dict:
+    """
+    Check if customer is eligible for top-up loan on existing loan
+    Eligibility criteria:
+    - Must be existing customer with good repayment history
+    - At least 12 EMIs paid on time
+    - No defaults in last 6 months
+    """
+    offer = LOAN_OFFERS.get(customer_id)
+    if not offer:
+        return {
+            "status": "error",
+            "message": "No customer record found"
+        }
+    
+    is_existing = offer.get("is_existing_customer", False)
+    repayment_history = offer.get("repayment_history", "NEW")
+    top_up_eligible = offer.get("top_up_eligible", False)
+    top_up_limit = offer.get("top_up_limit", 0)
+    
+    if not is_existing:
+        return {
+            "status": "success",
+            "eligible": False,
+            "reason": "New customer - Top-up available only for existing customers with good repayment history"
+        }
+    
+    if repayment_history not in ["EXCELLENT", "GOOD"]:
+        return {
+            "status": "success",
+            "eligible": False,
+            "reason": f"Repayment history: {repayment_history}. Need at least 'GOOD' rating for top-up eligibility"
+        }
+    
+    if not top_up_eligible:
+        return {
+            "status": "success",
+            "eligible": False,
+            "reason": "Minimum 12 EMIs with on-time payment required for top-up eligibility"
+        }
+    
+    return {
+        "status": "success",
+        "eligible": True,
+        "top_up_limit": top_up_limit,
+        "interest_rate": offer["interest_rate"],
+        "processing_fee_percent": offer["processing_fee_percent"],
+        "message": f"Congratulations! You're eligible for a top-up loan up to ₹{top_up_limit:,}",
+        "benefits": [
+            "No fresh documentation required",
+            "Instant approval within 24 hours",
+            "Flexible tenure options",
+            "Same interest rate as existing loan"
+        ]
+    }
+
+
+def calculate_additional_borrowing_capacity(customer_id: str, current_emi: float, monthly_salary: float) -> dict:
+    """
+    Calculate how much additional loan customer can take based on existing EMI and salary
+    Rule: Total EMI should not exceed 50% of monthly salary
+    """
+    offer = LOAN_OFFERS.get(customer_id)
+    if not offer:
+        return {
+            "status": "error",
+            "message": "No customer record found"
+        }
+    
+    # Maximum allowable EMI = 50% of salary
+    max_total_emi = monthly_salary * 0.5
+    
+    # Available EMI capacity
+    available_emi = max_total_emi - current_emi
+    
+    if available_emi <= 0:
+        return {
+            "status": "success",
+            "additional_capacity": 0,
+            "message": "Current EMI is at maximum capacity (50% of salary). No additional borrowing possible.",
+            "current_emi_ratio": round((current_emi / monthly_salary) * 100, 2)
+        }
+    
+    # Calculate maximum additional loan amount
+    # Use standard tenure and interest rate
+    tenure_months = 60  # 5 years standard
+    interest_rate = offer["interest_rate"]
+    
+    # Reverse EMI calculation to find principal
+    monthly_rate = interest_rate / (12 * 100)
+    if monthly_rate == 0:
+        max_additional_amount = available_emi * tenure_months
+    else:
+        max_additional_amount = available_emi * (((1 + monthly_rate) ** tenure_months) - 1) / (monthly_rate * ((1 + monthly_rate) ** tenure_months))
+    
+    return {
+        "status": "success",
+        "additional_capacity": round(max_additional_amount, 2),
+        "available_emi": round(available_emi, 2),
+        "current_emi": current_emi,
+        "max_total_emi": max_total_emi,
+        "current_emi_ratio": round((current_emi / monthly_salary) * 100, 2),
+        "message": f"You can borrow an additional ₹{max_additional_amount:,.0f} with EMI of ₹{available_emi:,.0f}",
+        "tenure_months": tenure_months,
+        "interest_rate": interest_rate
     }

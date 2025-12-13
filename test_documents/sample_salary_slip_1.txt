@@ -1,0 +1,46 @@
+===============================================================================
+                        TECH SOLUTIONS PVT LTD
+                     Monthly Payslip - November 2025
+===============================================================================
+
+Employee Details:
+-----------------
+Name:               Amit Patel
+Employee ID:        EMP12345
+Department:         Engineering
+Designation:        Senior Software Engineer
+PAN:                ABCDE1234F
+Bank Account:       HDFC Bank - XXXX7890
+
+Salary Breakdown:
+-----------------
+Basic Salary:                                           ₹45,000.00
+House Rent Allowance (HRA):                            ₹22,500.00
+Special Allowance:                                       ₹7,500.00
+                                                      ------------
+Gross Earnings:                                         ₹75,000.00
+
+Deductions:
+-----------
+Provident Fund (PF):                                     ₹5,400.00
+Professional Tax:                                          ₹200.00
+Income Tax (TDS):                                        ₹8,500.00
+                                                      ------------
+Total Deductions:                                       ₹14,100.00
+
+===============================================================================
+NET PAY (Take Home):                                    ₹60,900.00
+===============================================================================
+
+Payment Details:
+----------------
+Payment Mode:       Bank Transfer (NEFT)
+Payment Date:       30-Nov-2025
+Bank Name:          HDFC Bank
+Account Number:     XXXX7890
+
+This is a computer-generated payslip and does not require a signature.
+
+Tech Solutions Pvt Ltd
+Bangalore, Karnataka
+CIN: U72900KA2010PTC054321

@@ -20,6 +20,10 @@ from google.adk.sessions import InMemorySessionService
 from loan_master_agent.agent import loan_master_agent
 from mock_data.customer_data import CUSTOMERS, get_customer_by_id
 from mock_data.offer_mart import get_pre_approved_offer
+from mock_data.campaign_data import get_campaign_data, get_personalized_opening
+from mock_data.persuasion_strategy import get_strategy_prompt, determine_customer_profile
+from mock_data.objection_handler import detect_objection, get_objection_handling_prompt
+from mock_data.analytics_tracker import log_conversation, display_performance_dashboard
 from utils import (
     add_user_query_to_history,
     call_agent_async,
@@ -27,6 +31,8 @@ from utils import (
     display_customer_offer,
     display_state,
     display_help,
+    display_intelligence_dashboard,
+    display_parallel_processing_status,
     Colors
 )
 
@@ -85,10 +91,42 @@ def select_customer():
 
 
 def get_initial_state(customer_id: str) -> dict:
-    """Create initial state for a customer session."""
+    """Create initial state for a customer session with intelligence layers."""
     customer = get_customer_by_id(customer_id)
     offer_result = get_pre_approved_offer(customer_id)
     offer = offer_result.get("offer", {}) if offer_result["status"] == "success" else {}
+    
+    # 🎯 Pre-Conversation Intelligence Layer
+    campaign_data = get_campaign_data(customer_id)
+    credit_score = customer.get("credit_score", 750)
+    
+    # 🧠 Smart Persuasion Strategy (LLM-driven, dynamic)
+    # Instead of hard-coded profiles, we provide context and let the AI adapt
+    persuasion_context = f"""
+CUSTOMER CONTEXT FOR INTELLIGENT ADAPTATION:
+- Credit Score: {credit_score} ({"Excellent" if credit_score >= 800 else "Good" if credit_score >= 750 else "Fair" if credit_score >= 700 else "Needs Improvement"})
+- Income: ₹{customer.get('monthly_salary', 0):,}/month ({"High" if customer.get('monthly_salary', 0) >= 100000 else "Medium" if customer.get('monthly_salary', 0) >= 50000 else "Budget-conscious"})
+- Campaign: {campaign_data.get('campaign', {}).get('source', 'Direct')} - {campaign_data.get('campaign', {}).get('keyword', 'personal loan')}
+- Intent: {campaign_data.get('campaign', {}).get('intent', 'GENERAL_PURPOSE')}
+- Urgency: {campaign_data.get('campaign', {}).get('urgency_level', 'MEDIUM')}
+- Customer Type: {campaign_data.get('customer_type', 'FIRST_TIME')}
+- Payment History: {campaign_data.get('journey', {}).get('payment_history', 'N/A')}
+
+ADAPT YOUR APPROACH INTELLIGENTLY:
+- If urgent need → Emphasize speed ("2-hour approval, 24-hour disbursement")
+- If repeat customer → Show appreciation ("As a valued customer for X years...")
+- If high credit score → Highlight premium rates ("Your excellent score qualifies you for our best 10.99% rate")
+- If budget-conscious → Focus on EMI affordability ("Just ₹X/month - less than dining expenses")
+- If skeptical/researcher → Provide transparency ("Complete breakdown, zero hidden charges")
+- If first-time borrower → Be educational and patient
+"""
+    
+    # 💡 Personalized Opening
+    personalized_opening = get_personalized_opening(customer_id, customer["name"], campaign_data)
+    
+    # Extract campaign intelligence for state
+    campaign = campaign_data.get("campaign", {})
+    journey = campaign_data.get("journey", {})
     
     return {
         # Customer information
@@ -108,6 +146,31 @@ def get_initial_state(customer_id: str) -> dict:
         "pre_approved_limit": customer["pre_approved_limit"],
         "credit_score": customer["credit_score"],
         "current_offer": offer,
+        
+        # 🎯 Pre-Conversation Intelligence
+        "campaign_source": campaign.get("source", "Direct"),
+        "campaign_keyword": campaign.get("keyword", "personal loan"),
+        "customer_intent": campaign.get("intent", "GENERAL_PURPOSE"),
+        "urgency_level": campaign.get("urgency_level", "MEDIUM"),
+        "customer_type": campaign_data.get("customer_type", "FIRST_TIME"),
+        "relationship_tenure_years": journey.get("relationship_tenure_years", 0),
+        "payment_history": journey.get("payment_history", "N/A"),
+        "current_loans_count": len(journey.get("current_loans", [])),
+        "previous_interactions_count": len(journey.get("previous_interactions", [])),
+        "offer_expiry_hours": campaign.get("offer_expiry_hours", 48),
+        
+        # 🧠 Persuasion Strategy (Smart, LLM-driven)
+        "persuasion_strategy": persuasion_context,
+        "personalized_opening": personalized_opening,
+        
+        # ⚠️ Objection Handling
+        "objection_handling_context": "No objections detected yet. Monitor customer responses.",
+        "detected_objections": [],
+        
+        # 💚 Emotional Intelligence
+        "current_sentiment": {"status": "neutral", "primary_sentiment": "NEUTRAL"},
+        "sentiment_adaptive_strategy": "No strong sentiment detected. Maintain professional, balanced tone.",
+        "sentiment_history": [],
         
         # Application tracking
         "loan_application": {},
@@ -153,6 +216,35 @@ async def main_async():
     
     # Create initial state for the customer
     initial_state = get_initial_state(customer_id)
+    
+    # ⚡ PARALLEL PROCESSING: Pre-fetch background data
+    # Start pre-loading KYC and credit data while customer is being greeted
+    print(f"{Colors.CYAN}⚡ Pre-loading customer data in parallel...{Colors.RESET}")
+    
+    # Import background data fetchers
+    from mock_data.crm_data import get_kyc_data
+    from mock_data.credit_bureau import get_credit_score
+    
+    # Pre-fetch in parallel (data already exists, but simulates async fetch)
+    try:
+        kyc_data = get_kyc_data(customer_id)
+        credit_data = get_credit_score(customer_id)
+        
+        # Store pre-fetched data in state for instant access
+        initial_state["_prefetched_kyc"] = kyc_data
+        initial_state["_prefetched_credit"] = credit_data
+        initial_state["_parallel_processing_enabled"] = True
+        
+        print(f"{Colors.GREEN}✓ Background data pre-loaded (KYC + Credit Score){Colors.RESET}")
+    except Exception as e:
+        print(f"{Colors.YELLOW}⚠ Background data pre-fetch failed: {e}{Colors.RESET}")
+        initial_state["_parallel_processing_enabled"] = False
+    
+    # 🧠 Display Intelligence Dashboard
+    display_intelligence_dashboard(initial_state)
+    
+    # ⚡ Display Parallel Processing Status
+    display_parallel_processing_status(initial_state.get("_parallel_processing_enabled", False))
     
     # Create user ID from customer
     USER_ID = customer_id.lower()
@@ -202,6 +294,12 @@ async def main_async():
                 await display_state(session_service, APP_NAME, USER_ID, SESSION_ID, "Application Status")
                 continue
             
+            # Handle dashboard command (analytics)
+            if user_input.lower() == "dashboard":
+                print(f"\n{Colors.CYAN}Loading performance analytics...{Colors.RESET}")
+                display_performance_dashboard()
+                continue
+            
             # Add user query to history
             await add_user_query_to_history(
                 session_service, APP_NAME, USER_ID, SESSION_ID, user_input
@@ -236,6 +334,13 @@ async def main_async():
     sanction = final_session.state.get("sanction_letter", {})
     if sanction:
         print(f"{Colors.CYAN}Sanction Reference:{Colors.RESET} {sanction.get('sanction_reference', 'N/A')}")
+    
+    # 📈 Log conversation for analytics and self-improvement
+    try:
+        log_conversation(final_session.state)
+        print(f"\n{Colors.GREEN}✓ Conversation logged for performance analytics{Colors.RESET}")
+    except Exception as e:
+        print(f"{Colors.YELLOW}⚠ Analytics logging skipped: {e}{Colors.RESET}")
 
 
 def main():

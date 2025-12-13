@@ -1,0 +1,54 @@
+================================================================================
+                         GLOBAL TECH CORPORATION
+                      Salary Statement - December 2025
+================================================================================
+
+Employee Information
+--------------------
+Employee Name:          Priya Sharma
+Employee Code:          GTC-5678
+Designation:            Manager - HR
+Department:             Human Resources
+PAN Card:               PQRST9876Z
+UAN:                    100987654321
+
+Salary Components                               Amount (₹)
+--------------------------------------------------------------------------------
+Basic Salary                                    70,000.00
+Dearness Allowance                              14,000.00
+House Rent Allowance                            35,000.00
+Conveyance Allowance                             1,600.00
+Medical Allowance                                1,250.00
+Special Allowance                                8,150.00
+                                              -----------
+GROSS EARNINGS                                 130,000.00
+
+Deductions
+----------
+Employee PF                                      8,400.00
+Employee ESI                                       975.00
+Professional Tax                                   200.00
+Income Tax (TDS)                                18,500.00
+                                              -----------
+TOTAL DEDUCTIONS                                28,075.00
+
+================================================================================
+NET SALARY (CREDIT TO BANK)                    101,925.00
+================================================================================
+
+Bank Details
+------------
+Bank Name:              ICICI Bank
+Account Number:         123456789012
+IFSC Code:              ICIC0001234
+Branch:                 MG Road, Mumbai
+
+Payment Date:           1st December 2025
+
+--------------------------------------------------------------------------------
+This is a system-generated document. No signature required.
+
+Global Tech Corporation
+Mumbai, Maharashtra 400001
+CIN: L72900MH2005PLC123456
+--------------------------------------------------------------------------------

@@ -38,3 +38,7 @@ wheels/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated Files
+sanction_letters/
+*.pdf

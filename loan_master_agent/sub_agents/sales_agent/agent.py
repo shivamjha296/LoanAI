@@ -20,6 +20,98 @@ from mock_data.offer_mart import (
     check_loan_eligibility
 )
 
+# Loan Purpose Categories with special features
+LOAN_PURPOSES = {
+    "TRAVEL": {
+        "category": "Travel Loan",
+        "description": "Fund your dream vacation - domestic or international travel",
+        "typical_amount_range": "₹50,000 - ₹5,00,000",
+        "special_features": [
+            "Flexible repayment options",
+            "Quick approval within 24 hours",
+            "No end-use verification required"
+        ],
+        "documents_required": ["Standard KYC", "Income proof"],
+        "popular_destinations": ["Europe", "Maldives", "Dubai", "Thailand", "USA"]
+    },
+    "MEDICAL": {
+        "category": "Medical Emergency Loan",
+        "description": "Cover medical expenses for treatments, surgeries, or emergencies",
+        "typical_amount_range": "₹1,00,000 - ₹15,00,000",
+        "special_features": [
+            "Instant approval for medical emergencies",
+            "Moratorium period available",
+            "Lower interest rates for medical treatments",
+            "Flexible EMI during recovery period"
+        ],
+        "documents_required": ["Medical bills/estimate", "Hospital admission letter (if applicable)"],
+        "covered_expenses": ["Surgery", "Hospitalization", "Diagnostic tests", "Medication", "Dental procedures"]
+    },
+    "WEDDING": {
+        "category": "Wedding/Marriage Loan",
+        "description": "Make your special day memorable without financial stress",
+        "typical_amount_range": "₹2,00,000 - ₹25,00,000",
+        "special_features": [
+            "Higher loan amounts for wedding expenses",
+            "Flexible tenure up to 6 years",
+            "Pre-wedding loan disbursal option",
+            "Covers all wedding-related expenses"
+        ],
+        "documents_required": ["Wedding card/invitation", "Venue booking confirmation"],
+        "covered_expenses": ["Venue booking", "Catering", "Photography", "Decoration", "Jewelry", "Honeymoon"]
+    },
+    "RENOVATION": {
+        "category": "Home Renovation Loan",
+        "description": "Revamp your home with our specialized renovation loan",
+        "typical_amount_range": "₹1,00,000 - ₹20,00,000",
+        "special_features": [
+            "Disbursement in stages as per project progress",
+            "Extended tenure options",
+            "Lower processing fees for home improvement",
+            "No property mortgage required"
+        ],
+        "documents_required": ["Renovation estimate/quotation", "Property ownership proof"],
+        "covered_expenses": ["Interior design", "Painting", "Flooring", "Kitchen/Bathroom upgrade", "Electrical/Plumbing work"]
+    },
+    "EDUCATION": {
+        "category": "Education Loan",
+        "description": "Invest in your future with education financing",
+        "typical_amount_range": "₹50,000 - ₹10,00,000",
+        "special_features": [
+            "Moratorium period until course completion",
+            "Covers tuition and living expenses",
+            "Special rates for premier institutions"
+        ],
+        "documents_required": ["Admission letter", "Fee structure"],
+        "covered_expenses": ["Tuition fees", "Books", "Equipment", "Accommodation"]
+    },
+    "DEBT_CONSOLIDATION": {
+        "category": "Debt Consolidation Loan",
+        "description": "Consolidate multiple loans into one easy EMI",
+        "typical_amount_range": "₹1,00,000 - ₹25,00,000",
+        "special_features": [
+            "Lower EMI burden",
+            "Single EMI instead of multiple payments",
+            "Potential interest rate savings",
+            "Simplified debt management"
+        ],
+        "documents_required": ["Existing loan statements", "Credit card statements"],
+        "benefits": ["Reduce monthly outflow", "Improve credit score", "Better financial planning"]
+    },
+    "GENERAL": {
+        "category": "General Purpose Personal Loan",
+        "description": "Flexible personal loan for any legitimate purpose",
+        "typical_amount_range": "₹50,000 - ₹35,00,000",
+        "special_features": [
+            "No end-use restrictions",
+            "Instant approval for pre-approved customers",
+            "Flexible tenure options"
+        ],
+        "documents_required": ["Standard KYC", "Income proof"],
+        "use_cases": ["Emergency funds", "Business startup", "Vehicle down payment", "Relocation"]
+    }
+}
+
 
 def get_customer_loan_offer(customer_id: str, tool_context: ToolContext) -> dict:
     """
@@ -119,6 +211,72 @@ def get_tenure_options(customer_id: str, tool_context: ToolContext) -> dict:
         dict: Available tenure options in months
     """
     return get_available_tenures(customer_id)
+
+
+def get_loan_purpose_details(purpose_key: str, tool_context: ToolContext) -> dict:
+    """
+    Get detailed information about specific loan purpose category.
+    Use this to educate customers about special loan types and their benefits.
+    
+    Args:
+        purpose_key: The loan purpose key (TRAVEL, MEDICAL, WEDDING, RENOVATION, EDUCATION, DEBT_CONSOLIDATION, GENERAL)
+        tool_context: The tool context for state management
+    
+    Returns:
+        dict: Detailed information about the loan purpose
+    """
+    purpose_key = purpose_key.upper()
+    
+    if purpose_key not in LOAN_PURPOSES:
+        return {
+            "status": "error",
+            "message": f"Invalid purpose key. Available options: {', '.join(LOAN_PURPOSES.keys())}"
+        }
+    
+    purpose_info = LOAN_PURPOSES[purpose_key]
+    
+    # Store selected purpose in state
+    tool_context.state["loan_purpose_category"] = purpose_key
+    tool_context.state["loan_purpose_details"] = purpose_info
+    
+    return {
+        "status": "success",
+        "purpose_category": purpose_info["category"],
+        "description": purpose_info["description"],
+        "typical_amount_range": purpose_info["typical_amount_range"],
+        "special_features": purpose_info["special_features"],
+        "documents_required": purpose_info["documents_required"],
+        "additional_info": {
+            k: v for k, v in purpose_info.items() 
+            if k not in ["category", "description", "typical_amount_range", "special_features", "documents_required"]
+        }
+    }
+
+
+def list_all_loan_purposes(tool_context: ToolContext) -> dict:
+    """
+    List all available loan purpose categories.
+    Use this to help customers choose the right loan type.
+    
+    Returns:
+        dict: List of all loan purposes with brief descriptions
+    """
+    purposes_summary = []
+    
+    for key, info in LOAN_PURPOSES.items():
+        purposes_summary.append({
+            "purpose_key": key,
+            "category": info["category"],
+            "description": info["description"],
+            "typical_range": info["typical_amount_range"]
+        })
+    
+    return {
+        "status": "success",
+        "total_categories": len(purposes_summary),
+        "loan_purposes": purposes_summary,
+        "message": "We offer specialized loans for various needs. Each category has unique features and benefits."
+    }
 
 
 def initiate_loan_application(
@@ -231,14 +389,14 @@ def show_emi_comparison(
     }
 
 
-# Create the Sales Agent
+# Create the Sales Agent - Mr. Rajesh Kumar
 sales_agent = Agent(
     name="sales_agent",
     model=LiteLlm(model="mistral/mistral-large-2411"),
-    description="Sales agent that negotiates loan terms, discusses customer needs, amount, tenure and interest rates",
+    description="Mr. Rajesh Kumar - Loan Specialist who negotiates loan terms, discusses customer needs, amount, tenure and interest rates",
     instruction="""
-    You are a friendly and professional Sales Agent for Tata Capital Personal Loans.
-    Your role is to help customers understand their loan options and guide them through the loan selection process.
+    You are Mr. Rajesh Kumar, a friendly and experienced Loan Specialist at Tata Capital Personal Loans.
+    You have a warm, consultative approach and genuinely care about finding the best loan solution for each customer.
 
     <customer_info>
     Customer ID: {customer_id}
@@ -260,45 +418,63 @@ sales_agent = Agent(
     {interaction_history}
     </interaction_history>
 
-    **Your Responsibilities:**
+    **Your Role as Mr. Rajesh Kumar - Loan Specialist:**
 
-    1. **Understand Customer Needs**
-       - Ask about the purpose of the loan (medical, education, wedding, travel, home renovation, etc.)
-       - Understand how much they need and their preferred EMI budget
-       - Be empathetic and build rapport
+    ALWAYS start your conversation by introducing yourself warmly:
+    "Hello {customer_name}! I'm Rajesh Kumar, your loan specialist at Tata Capital. 
+     I'm here to help you find the perfect loan option that fits your needs and budget."
 
-    2. **Present Loan Offers**
-       - Use get_customer_loan_offer to fetch their pre-approved offer
-       - Highlight special offers if available
-       - Explain interest rates and processing fees clearly
+    1. **Understand Customer Needs (Build Rapport)**
+       - Ask about the purpose of the loan with genuine interest
+         Example: "That sounds exciting! What are you planning to use the loan for?"
+       - Understand how much they need and their comfortable EMI range
+       - Be empathetic and conversational - make them feel comfortable
 
-    3. **EMI Calculations**
-       - Use calculate_loan_emi to show exact EMI for requested amount
-       - Use show_emi_comparison to compare EMIs across tenures
-       - Help customers choose the right tenure based on their budget
+    2. **Present Personalized Loan Offers**
+       - Use get_customer_loan_offer to fetch their exclusive pre-approved offer
+       - Present it enthusiastically: "Great news! I have some excellent offers for you..."
+       - Highlight special offers and benefits
+       - Explain interest rates and fees in simple terms
 
-    4. **Negotiate and Advise**
-       - If requested amount exceeds pre-approved limit, explain options
-       - Suggest optimal loan amount based on their salary and EMI affordability
-       - EMI should ideally not exceed 50% of monthly salary
+    3. **EMI Calculations & Guidance**
+       - Use calculate_loan_emi to show exact EMI for their requested amount
+       - Use show_emi_comparison to compare different tenure options
+       - Guide them: "Let me show you how this breaks down month by month..."
+       - Help them choose based on their budget and goals
 
-    5. **Initiate Application**
+    4. **Professional Negotiation & Advice**
+       - If requested amount exceeds pre-approved limit, explain options tactfully
+       - Suggest optimal loan amounts based on their salary
+       - Golden rule: Keep EMI under 50% of monthly salary for comfort
+       - Be transparent about eligibility and approval chances
+
+    5. **Initiate Application (Seamless Handoff)**
        - Once customer agrees, use initiate_loan_application
-       - Explain the next steps (verification, underwriting)
-       - Assure them of quick processing
+       - Celebrate their decision: "Excellent choice! Let me get this started for you..."
+       - Explain next steps clearly: "After I initiate this, my colleague Mr. Soham Patel 
+         from our KYC team will help verify your details. It's quick and simple!"
+       - Thank them for choosing Tata Capital
 
-    **Communication Style:**
-    - Be warm and welcoming
-    - Use simple language, avoid jargon
-    - Always provide exact numbers (EMI, total payment, etc.)
-    - Be honest about eligibility criteria
-    - Create urgency around limited-time offers if applicable
+    **Your Communication Style as Rajesh:**
+    - Start with a warm, personal introduction every time
+    - Be conversational, friendly, and professional
+    - Use the customer's name frequently
+    - Provide exact numbers and calculations
+    - Explain everything in simple terms, no jargon
+    - Show enthusiasm about helping them
+    - Be honest and transparent about all terms
+    - Create a sense of partnership: "Let's find what works best for you..."
 
-    **Important:**
-    - Never pressure customers
-    - Always verify customer understanding
+    **Important Guidelines:**
+    - Never pressure or rush customers
+    - Always verify their understanding: "Does this sound good to you?"
     - Confirm all details before initiating application
-    - Hand off to verification agent after application is initiated
+    - After application initiation, smoothly hand off to the verification team
+    - Maintain a positive, can-do attitude throughout
+
+    Remember: You are Rajesh Kumar, a trusted loan advisor. Your goal is to make customers 
+    feel informed, confident, and excited about their loan decision. Work seamlessly with 
+    your colleagues to provide a smooth experience.
     """,
     tools=[
         get_customer_loan_offer,

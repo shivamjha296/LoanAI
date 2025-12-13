@@ -1,0 +1,27 @@
+# LoanAI - BFSI Personal Loan Chatbot Requirements
+
+# Core ADK and AI Libraries
+google-genai
+python-dotenv
+litellm
+
+# PDF Generation
+weasyprint
+
+# Document Processing & OCR
+PyPDF2                  # PDF text extraction
+Pillow                  # Image processing
+pytesseract             # OCR for images (requires Tesseract-OCR installed on system)
+
+# Additional Dependencies (installed automatically by weasyprint)
+# - cffi
+# - pycairo
+# - pyphen
+# - cssselect2
+# - tinycss2
+# - Pillow
+
+# NOTE: For pytesseract to work, you also need to install Tesseract-OCR:
+# Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+# Mac: brew install tesseract
+# Linux: sudo apt-get install tesseract-ocr

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tata Capital - Loan Sanction Letter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            padding: 40px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border: 2px solid #003d7a;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #003d7a 0%, #005aa7 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .header h2 {
+            font-size: 20px;
+            font-weight: normal;
+            margin-bottom: 15px;
+        }
+        
+        .reference-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 5px;
+        }
+        
+        .reference-box table {
+            width: 100%;
+            color: white;
+        }
+        
+        .reference-box td {
+            padding: 5px 10px;
+        }
+        
+        .reference-box .label {
+            font-weight: bold;
+            width: 50%;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            background: #f5f5f5;
+            color: #003d7a;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-left: 4px solid #003d7a;
+            margin-bottom: 15px;
+        }
+        
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        .details-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .details-table .label {
+            font-weight: 600;
+            color: #003d7a;
+            width: 40%;
+        }
+        
+        .details-table .value {
+            color: #333;
+        }
+        
+        .highlight-box {
+            background: #fff8e1;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .highlight-box h3 {
+            color: #f57c00;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .emi-box {
+            text-align: center;
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        .emi-box .amount {
+            font-size: 32px;
+            color: #1976d2;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .emi-box .label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .terms {
+            background: #f9f9f9;
+            padding: 20px;
+            font-size: 12px;
+            line-height: 1.8;
+            border-left: 3px solid #003d7a;
+            margin-top: 20px;
+        }
+        
+        .terms ol {
+            margin-left: 20px;
+        }
+        
+        .terms li {
+            margin-bottom: 10px;
+        }
+        
+        .signature-section {
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .signature-block {
+            text-align: center;
+            margin-top: 60px;
+        }
+        
+        .signature-line {
+            border-top: 2px solid #333;
+            width: 250px;
+            margin: 0 auto 10px;
+        }
+        
+        .footer {
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 3px solid #003d7a;
+        }
+        
+        .footer strong {
+            color: #003d7a;
+        }
+        
+        .important-note {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-size: 13px;
+        }
+        
+        .congratulations {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            border-radius: 5px;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            .container {
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TATA CAPITAL LIMITED</h1>
+            <h2>Personal Loan Sanction Letter</h2>
+            <div class="reference-box">
+                <table>
+                    <tr>
+                        <td class="label">Sanction Reference:</td>
+                        <td>{{sanction_reference}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Approval Reference:</td>
+                        <td>{{approval_reference}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Date:</td>
+                        <td>{{sanction_date}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Valid Until:</td>
+                        <td>{{validity_until}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="congratulations">
+                🎉 Congratulations! Your Loan Has Been Sanctioned! 🎉
+            </div>
+            
+            <div class="section">
+                <div class="section-title">BORROWER DETAILS</div>
+                <table class="details-table">
+                    <tr>
+                        <td class="label">Name:</td>
+                        <td class="value">{{borrower_name}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Customer ID:</td>
+                        <td class="value">{{customer_id}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">PAN:</td>
+                        <td class="value">{{borrower_pan}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Contact:</td>
+                        <td class="value">{{borrower_phone}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Email:</td>
+                        <td class="value">{{borrower_email}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Address:</td>
+                        <td class="value">{{borrower_address}}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">LOAN DETAILS</div>
+                <table class="details-table">
+                    <tr>
+                        <td class="label">Loan Type:</td>
+                        <td class="value">{{loan_type}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Sanctioned Amount:</td>
+                        <td class="value"><strong>₹{{sanctioned_amount}}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label">Interest Rate:</td>
+                        <td class="value">{{interest_rate}}% per annum</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Loan Tenure:</td>
+                        <td class="value">{{tenure_months}} months ({{tenure_years}} years)</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Processing Fee:</td>
+                        <td class="value">₹{{processing_fee}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Net Disbursement Amount:</td>
+                        <td class="value"><strong>₹{{disbursement_amount}}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="label">Loan Purpose:</td>
+                        <td class="value">{{purpose}}</td>
+                    </tr>
+                </table>
+                
+                <div class="emi-box">
+                    <div class="label">Your Monthly EMI</div>
+                    <div class="amount">₹{{monthly_emi}}</div>
+                    <div class="label">Starting from {{first_emi_date}}</div>
+                </div>
+                
+                <div class="highlight-box">
+                    <h3>📊 Repayment Summary</h3>
+                    <table class="details-table">
+                        <tr>
+                            <td class="label">Total Interest Payable:</td>
+                            <td class="value">₹{{total_interest}}</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Total Repayment Amount:</td>
+                            <td class="value"><strong>₹{{total_repayment}}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">DISBURSEMENT DETAILS</div>
+                <table class="details-table">
+                    <tr>
+                        <td class="label">Bank Name:</td>
+                        <td class="value">{{bank_name}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Account Number:</td>
+                        <td class="value">{{account_number}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Disbursement Mode:</td>
+                        <td class="value">{{disbursement_mode}}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Expected Disbursement:</td>
+                        <td class="value">{{expected_disbursement}}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="important-note">
+                <strong>⚠️ Important:</strong> This sanction letter is valid until {{validity_until}}. 
+                Please submit all required documents within this period to proceed with loan disbursement.
+            </div>
+            
+            <div class="section">
+                <div class="section-title">TERMS & CONDITIONS</div>
+                <div class="terms">
+                    <ol>
+                        <li>The loan is sanctioned subject to submission and verification of all required documents.</li>
+                        <li>The loan will be disbursed to the bank account specified above after document verification.</li>
+                        <li>EMI payments must be made on or before the due date each month via Auto-Debit/NACH mandate.</li>
+                        <li>Interest will be calculated on a reducing balance basis at the rate mentioned above.</li>
+                        <li>Processing fee of {{processing_fee_percent}}% is non-refundable and will be deducted from the sanctioned amount.</li>
+                        <li>Pre-payment charges: 
+                            <ul>
+                                <li>Within 12 months: 4% of outstanding principal + GST</li>
+                                <li>After 12 months: 2% of outstanding principal + GST</li>
+                            </ul>
+                        </li>
+                        <li>Late payment charges of 2% per month will be applicable on overdue EMIs.</li>
+                        <li>The borrower must maintain adequate balance in the designated account for EMI auto-debit.</li>
+                        <li>Tata Capital reserves the right to modify interest rates as per RBI guidelines.</li>
+                        <li>The loan agreement is governed by Indian laws and subject to jurisdiction of courts in Mumbai.</li>
+                        <li>Failure to repay EMIs may result in negative credit bureau reporting and legal action.</li>
+                        <li>This sanction is subject to Tata Capital's credit and underwriting policies.</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="signature-section">
+                <p><strong>For TATA CAPITAL LIMITED</strong></p>
+                <div class="signature-block">
+                    <div class="signature-line"></div>
+                    <p><strong>Authorized Signatory</strong></p>
+                    <p>Credit & Underwriting Department</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>TATA CAPITAL LIMITED</strong></p>
+            <p>11th Floor, Tower A, Peninsula Business Park, Ganpatrao Kadam Marg, Lower Parel, Mumbai - 400013</p>
+            <p>Customer Care: 1800-209-9090 | Email: customercare@tatacapital.com | Website: www.tatacapital.com</p>
+            <p style="margin-top: 10px; font-size: 10px;">
+                This is a computer-generated document and does not require a physical signature.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

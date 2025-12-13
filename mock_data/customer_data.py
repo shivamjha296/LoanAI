@@ -16,11 +16,14 @@ CUSTOMERS = {
         "occupation": "Software Engineer",
         "employer": "TCS",
         "monthly_salary": 85000,
+        "employment_type": "SALARIED",
+        "years_with_current_employer": 3,
+        "total_work_experience": 10,
         "current_loans": [
             {"type": "Home Loan", "amount": 2500000, "emi": 22000, "remaining_tenure": 180}
         ],
         "credit_score": 780,
-        "pre_approved_limit": 500000,
+        "pre_approved_limit": 700000,
         "account_number": "SBI1234567890",
         "bank_name": "State Bank of India"
     },
@@ -251,3 +254,68 @@ def get_customer_by_id(customer_id: str) -> dict | None:
 def get_all_customers() -> dict:
     """Retrieve all customers"""
     return CUSTOMERS
+
+
+def validate_customer_eligibility(customer_id: str) -> dict:
+    """
+    Validate if customer meets Tata Capital eligibility criteria:
+    - Age: 21 to 60 years
+    - Minimum Income: ₹25,000 per month
+    - CIBIL Score: 700+
+    - Employment: Salaried (2+ years experience, 1+ year with current employer)
+                  or Self-employed
+    """
+    customer = CUSTOMERS.get(customer_id)
+    if not customer:
+        return {
+            "status": "error",
+            "message": "Customer not found"
+        }
+    
+    age = customer["age"]
+    monthly_salary = customer["monthly_salary"]
+    credit_score = customer["credit_score"]
+    employment_type = customer.get("employment_type", "SALARIED")
+    years_with_employer = customer.get("years_with_current_employer", 0)
+    total_experience = customer.get("total_work_experience", 0)
+    
+    errors = []
+    
+    # Age validation
+    if age < 21 or age > 60:
+        errors.append(f"Age {age} is outside the eligible range (21-60 years)")
+    
+    # Income validation
+    if monthly_salary < 25000:
+        errors.append(f"Monthly income ₹{monthly_salary:,} is below minimum requirement of ₹25,000")
+    
+    # Credit score validation
+    if credit_score < 700:
+        errors.append(f"Credit score {credit_score} is below minimum requirement of 700")
+    
+    # Employment validation
+    if employment_type == "SALARIED":
+        if total_experience < 2:
+            errors.append(f"Total work experience {total_experience} years is below minimum requirement of 2 years")
+        if years_with_employer < 1:
+            errors.append(f"Experience with current employer {years_with_employer} years is below minimum requirement of 1 year")
+    
+    if errors:
+        return {
+            "status": "success",
+            "eligible": False,
+            "errors": errors,
+            "message": "Customer does not meet eligibility criteria"
+        }
+    
+    return {
+        "status": "success",
+        "eligible": True,
+        "message": "Customer meets all eligibility criteria",
+        "details": {
+            "age": f"{age} years (Valid: 21-60)",
+            "monthly_income": f"₹{monthly_salary:,} (Minimum: ₹25,000)",
+            "credit_score": f"{credit_score} (Minimum: 700)",
+            "employment": f"{employment_type} - {total_experience} years total experience"
+        }
+    }
