@@ -6,7 +6,8 @@ python-dotenv
 litellm
 
 # PDF Generation
-weasyprint
+weasyprint              # Primary PDF generator (has font issues on Windows)
+xhtml2pdf              # Fallback PDF generator (ReportLab-based, more Windows-friendly)
 
 # Document Processing & OCR
 PyPDF2                  # PDF text extraction

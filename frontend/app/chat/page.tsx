@@ -59,7 +59,11 @@ function ChatContent() {
                 />
             </div>
             <div className="lg:col-span-1">
-                <StatusPanel state={state} />
+                <StatusPanel 
+                    state={state} 
+                    sessionId={sessionId} 
+                    userId={userId} 
+                />
             </div>
         </div>
     );

@@ -1,14 +1,40 @@
 
 import React from 'react';
-import { CheckCircle, Clock, AlertCircle, FileText, CreditCard, UserCheck } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, FileText, CreditCard, UserCheck, Download } from 'lucide-react';
 import clsx from 'clsx';
+import axios from 'axios';
 
 interface StatusPanelProps {
     state: any;
+    sessionId?: string;
+    userId?: string;
 }
 
-export default function StatusPanel({ state }: StatusPanelProps) {
+export default function StatusPanel({ state, sessionId, userId }: StatusPanelProps) {
     if (!state) return null;
+
+    const handleDownloadSanctionLetter = async () => {
+        if (!sessionId || !userId) return;
+        
+        try {
+            const response = await axios.get(
+                `http://localhost:8000/api/download-sanction-letter/${sessionId}?user_id=${userId}`,
+                { responseType: 'blob' }
+            );
+            
+            // Create download link
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `sanction_letter_${state.sanction_letter?.sanction_reference || 'document'}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Error downloading sanction letter:', error);
+            alert('Failed to download sanction letter. Please try again.');
+        }
+    };
 
     const steps = [
         {
@@ -103,10 +129,16 @@ export default function StatusPanel({ state }: StatusPanelProps) {
 
             {/* Sanction Letter Download */}
             {state.sanction_letter?.sanction_reference && (
-                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md text-center">
-                    <p className="text-green-800 font-medium mb-2">Loan Sanctioned!</p>
-                    <button className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 w-full">
-                        <FileText size={16} />
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
+                    <p className="text-green-800 font-medium mb-2">🎉 Loan Sanctioned!</p>
+                    <p className="text-sm text-gray-600 mb-3">
+                        Reference: {state.sanction_letter.sanction_reference}
+                    </p>
+                    <button 
+                        onClick={handleDownloadSanctionLetter}
+                        className="bg-green-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2 w-full"
+                    >
+                        <Download size={16} />
                         Download Sanction Letter
                     </button>
                 </div>

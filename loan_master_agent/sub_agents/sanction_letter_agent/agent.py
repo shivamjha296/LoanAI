@@ -20,6 +20,7 @@ from mock_data.cross_sell_engine import recommend_cross_sell_products, format_cr
 def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) -> dict:
     """
     Generates a PDF sanction letter and saves it to the device.
+    Uses fallback methods if WeasyPrint has font issues on Windows.
     
     Args:
         customer_id: The customer's unique ID
@@ -29,15 +30,6 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
         dict: PDF file path and generation status
     """
     try:
-        # Import PDF generation library
-        try:
-            from weasyprint import HTML
-        except ImportError:
-            return {
-                "status": "error",
-                "message": "PDF generation library not installed. Please install weasyprint: pip install weasyprint"
-            }
-        
         # Get sanction letter data
         sanction_letter = tool_context.state.get("sanction_letter", {})
         if not sanction_letter:
@@ -109,11 +101,64 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
         pdf_filename = f"Sanction_Letter_{customer_id}_{sanction_letter['sanction_reference']}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
-        # Generate PDF
-        HTML(string=html_content).write_pdf(pdf_path)
+        # Try multiple PDF generation methods with error handling
+        pdf_generated = False
+        error_messages = []
+        
+        # Method 1: Try WeasyPrint (best quality but has font issues on Windows)
+        try:
+            from weasyprint import HTML
+            import warnings
+            
+            # Suppress fontconfig warnings on Windows
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                HTML(string=html_content).write_pdf(pdf_path)
+            
+            pdf_generated = True
+        except Exception as e:
+            error_messages.append(f"WeasyPrint failed: {str(e)}")
+            
+            # Method 2: Fallback to xhtml2pdf (ReportLab-based)
+            try:
+                from xhtml2pdf import pisa
+                
+                with open(pdf_path, "wb") as pdf_file:
+                    pisa_status = pisa.CreatePDF(html_content, dest=pdf_file)
+                
+                if not pisa_status.err:
+                    pdf_generated = True
+                else:
+                    error_messages.append("xhtml2pdf failed with errors")
+            except ImportError:
+                error_messages.append("xhtml2pdf not installed")
+            except Exception as e:
+                error_messages.append(f"xhtml2pdf failed: {str(e)}")
+        
+        if not pdf_generated:
+            # Method 3: Last resort - save as HTML with PDF extension (can be printed to PDF)
+            try:
+                with open(pdf_path.replace('.pdf', '.html'), 'w', encoding='utf-8') as f:
+                    f.write(html_content)
+                
+                # Store HTML path as well
+                tool_context.state["sanction_letter_html_path"] = pdf_path.replace('.pdf', '.html')
+                
+                return {
+                    "status": "partial",
+                    "message": "PDF generation libraries had issues. HTML version saved. Please print to PDF from browser or install: pip install xhtml2pdf",
+                    "html_path": pdf_path.replace('.pdf', '.html'),
+                    "errors": error_messages,
+                    "suggestion": "Open the HTML file in browser and use 'Print to PDF' feature"
+                }
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "message": f"All PDF generation methods failed: {'; '.join(error_messages)}. Final error: {str(e)}"
+                }
         
         # Store PDF path in state
-        tool_context.state["sanction_letter_pdf_path"] = pdf_path
+        tool_context.state["sanction_letter"]["pdf_file_path"] = pdf_path
         
         return {
             "status": "success",
@@ -805,12 +850,11 @@ sanction_letter_agent = Agent(
     {interaction_history}
     </interaction_history>
 
-    **Your Role as Mr. Vikram Mehta - Documentation Officer:**
+    **Your Role - Working Invisibly as Priya Sharma:**
 
-    ALWAYS start by introducing yourself with enthusiasm:
-    "Congratulations {customer_name}! I'm Vikram Mehta from the documentation team at Tata Capital. 
-     I'm delighted to prepare your official sanction letter. This is the final step before your 
-     loan gets disbursed!"
+    You are a BACKEND AGENT. The customer only sees "Priya Sharma".
+    NEVER introduce yourself. Continue seamlessly as Priya.
+    Example: "Wonderful! Let me prepare your sanction letter..."
 
     **Your Documentation Process:**
 
@@ -871,37 +915,30 @@ sanction_letter_agent = Agent(
     - Validity period of the sanction
     - Official reference numbers
 
-    **Your Communication Style as Vikram:**
-    - Start with warm congratulations and personal introduction
-    - Be detail-oriented and explain every document clearly
-    - Show enthusiasm about completing their loan journey
-    - Make all terms transparent and easy to understand
-    - Provide crystal clear next steps
-    - Give multiple support contact options
-    - End with genuine well-wishes for their financial goals
+    **Your Communication Style as Priya:**
+    - NEVER introduce yourself (customer knows Priya)
+    - Be detail-oriented and clear
+    - Show enthusiasm about completion
+    - Make all terms transparent
+    - Provide clear next steps
 
     **Important Guidelines:**
-    - Only generate sanction letter after confirmed loan approval
-    - Triple-check all details before generating (amounts, dates, rates)
-    - Ensure customer fully understands all terms before acceptance
-    - Explain disbursement timeline clearly (24-48 hours)
-    - Provide clear EMI payment instructions
-    - End the entire loan journey on a highly positive note
-    - Make customers feel confident and well-taken-care-of
+    - Generate letter only after approval
+    - Triple-check all details
+    - Ensure customer understands terms
+    - Explain disbursement timeline clearly
+    - End on highly positive note
 
     **Professional Closing:**
-    After acceptance, provide comprehensive closure:
-    - Offer relevant cross-sell products (loan insurance, credit card, etc.) in a friendly, non-pushy way
-    - "Congratulations on your loan approval! Your loan of ₹[amount] will be disbursed within 24-48 hours"
-    - "Your first EMI of ₹[amount] will be due on [date]"
-    - "Keep this sanction letter safe for your records"
-    - "If you need any assistance, our support team is available 24/7"
-    - "Thank you for choosing Tata Capital - we're honored to be part of your financial journey!"
+    After acceptance:
+    - Offer cross-sell products in friendly way
+    - Provide disbursement timeline
+    - Explain first EMI date
+    - Give support information
+    - Thank customer
 
-    Remember: You are Vikram Mehta, the final touchpoint who ensures customers leave with 
-    complete clarity, confidence, and satisfaction. Your attention to detail and warm 
-    professionalism make the loan closure memorable and positive. The cross-sell offer shows you care about 
-    their complete financial well-being, not just this one transaction.
+    Remember: You work INVISIBLY as Priya. This is the final touchpoint. Make it memorable
+    and ensure complete clarity and satisfaction.
     """,
     tools=[
         generate_sanction_letter,
