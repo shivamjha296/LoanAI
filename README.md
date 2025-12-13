@@ -255,7 +255,33 @@ python main.py
 
 ---
 
-### Method 2: ADK Web UI (Browser-Based Testing)
+### Method 2: Web UI (New)
+
+Run the modern web interface with Tata Capital branding.
+
+1. **Start the Backend Server**
+   ```bash
+   # In the project root
+   python server.py
+   ```
+   The server will start at `http://localhost:8000`.
+
+2. **Start the Frontend**
+   ```bash
+   # Open a new terminal
+   cd frontend
+   npm run dev
+   ```
+   The application will be available at `http://localhost:3000`.
+
+3. **Access the Application**
+   - Open `http://localhost:3000` in your browser.
+   - Select a customer profile to start.
+   - Chat with the assistant and track your loan application in real-time.
+
+---
+
+### Method 3: ADK Web UI (Browser-Based Testing)
 
 Launch an interactive web interface for testing your agents with a visual chat UI, event inspector, and trace viewer.
 
