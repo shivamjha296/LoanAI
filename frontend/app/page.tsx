@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { User, CreditCard, MapPin, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { User, CreditCard, MapPin, ArrowRight, Loader2, AlertCircle, Video } from 'lucide-react';
 import clsx from 'clsx';
+import Link from 'next/link';
 import { Customer } from '@/types';
 import { API_ENDPOINTS } from '@/lib/config';
 
@@ -62,6 +63,21 @@ export default function Home() {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Experience our AI-powered personal loan assistant. Select a profile below to start your journey.
           </p>
+          
+          {/* AI Persona CTA */}
+          <div className="mt-6">
+            <Link 
+              href="/persona"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-tata-blue to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            >
+              <Video size={20} />
+              Try Our AI Video Advisor
+              <ArrowRight size={20} />
+            </Link>
+            <p className="text-sm text-gray-500 mt-2">
+              Experience real-time video conversations with our AI loan advisor
+            </p>
+          </div>
         </div>
 
         {loading ? (
