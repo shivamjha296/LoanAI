@@ -17,6 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
+import hashlib
+import litellm
 
 from loan_master_agent.agent import loan_master_agent
 from mock_data.customer_data import CUSTOMERS, get_customer_by_id
@@ -25,6 +27,39 @@ from mock_data.campaign_data import get_campaign_data, get_personalized_opening
 
 # Load environment variables
 load_dotenv(override=True)
+
+# Configure litellm for Mistral compatibility with short tool call IDs
+import litellm
+litellm.drop_params = True  # Drop unsupported parameters
+os.environ["LITELLM_DROP_PARAMS"] = "True"
+
+# Monkey patch to fix tool call IDs for Mistral
+original_completion = litellm.completion
+
+def patched_completion(*args, **kwargs):
+    """Wrapper to ensure tool call IDs are Mistral-compatible (9 chars max)."""
+    result = original_completion(*args, **kwargs)
+    
+    # Fix tool call IDs in response if present
+    if hasattr(result, 'choices') and result.choices:
+        for choice in result.choices:
+            if hasattr(choice, 'message') and hasattr(choice.message, 'tool_calls') and choice.message.tool_calls:
+                for tool_call in choice.message.tool_calls:
+                    if hasattr(tool_call, 'id') and len(tool_call.id) > 9:
+                        # Generate short ID from hash
+                        import hashlib
+                        tool_call.id = hashlib.md5(tool_call.id.encode()).hexdigest()[:9]
+    
+    return result
+
+litellm.completion = patched_completion
+
+# Utility function to generate short tool call IDs for Mistral
+def generate_short_tool_call_id(original_id: str) -> str:
+    """Generate a 9-character tool call ID from the original ID for Mistral compatibility."""
+    # Use first 9 characters of MD5 hash (alphanumeric)
+    hash_obj = hashlib.md5(original_id.encode())
+    return hash_obj.hexdigest()[:9]
 
 app = FastAPI(title="Tata Capital Loan Assistant API")
 

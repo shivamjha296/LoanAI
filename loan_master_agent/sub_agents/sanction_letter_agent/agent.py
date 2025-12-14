@@ -124,13 +124,23 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
             with sync_playwright() as p:
                 browser = p.chromium.launch()
                 page = browser.new_page()
-                page.goto(f'file:///{html_path.replace(os.sep, "/")}')
-                page.pdf(path=pdf_path, format='A4', print_background=True, margin={
-                    'top': '15mm',
-                    'right': '15mm',
-                    'bottom': '15mm',
-                    'left': '15mm'
-                })
+                # Wait for page to fully load with fonts
+                page.goto(f'file:///{html_path.replace(os.sep, "/")}', wait_until='networkidle')
+                # Wait a bit for fonts to render
+                page.wait_for_timeout(500)
+                # Generate PDF with optimized settings for better alignment
+                page.pdf(
+                    path=pdf_path, 
+                    format='A4', 
+                    print_background=True,
+                    prefer_css_page_size=True,  # Respect @page CSS rules
+                    margin={
+                        'top': '15mm',
+                        'right': '15mm',
+                        'bottom': '15mm',
+                        'left': '15mm'
+                    }
+                )
                 browser.close()
             
             pdf_generated = True
