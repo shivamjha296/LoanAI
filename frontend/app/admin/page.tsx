@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, CreditCard, Database, TrendingUp, LogOut, Menu, X } from 'lucide-react';
+import { Users, CreditCard, Database, TrendingUp, LogOut, Menu, X, User, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { API_BASE_URL } from '@/lib/config';
 
@@ -13,6 +13,8 @@ export default function AdminPage() {
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -26,6 +28,22 @@ export default function AdminPage() {
     useEffect(() => {
         fetchData(selectedTable);
     }, [selectedTable]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+
+        if (dropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [dropdownOpen]);
 
     const fetchData = async (table: TableType) => {
         setLoading(true);
@@ -56,9 +74,9 @@ export default function AdminPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-gray-50 flex overflow-hidden">
             {/* Sidebar */}
-            <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-all duration-300 overflow-hidden flex flex-col`}>
+            <aside className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-transform duration-300 flex flex-col fixed h-screen z-10`}>
                 {/* Logo Section */}
                 <div className="p-6 border-b border-gray-700">
                     <div className="flex items-center gap-3">
@@ -118,14 +136,14 @@ export default function AdminPage() {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col">
+            <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-0'}`}>
                 {/* Header */}
                 <header className="bg-white shadow-sm border-b border-gray-200">
-                    <div className="px-6 py-4 flex items-center justify-between">
+                    <div className="px-6 py-3 flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                                className="p-2 hover:bg-gray-100 rounded-lg"
+                                className="p-2 hover:bg-gray-100 rounded-lg text-gray-700 hover:text-gray-900 bg-gray-200"
                                 aria-label="Toggle sidebar"
                             >
                                 {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
@@ -139,8 +157,32 @@ export default function AdminPage() {
                                 </p>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <p className="text-sm font-medium text-tata-blue">Tata Capital Admin</p>
+                        <div className="relative" ref={dropdownRef}>
+                            <button
+                                onClick={() => setDropdownOpen(!dropdownOpen)}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-full bg-tata-blue flex items-center justify-center text-white font-bold">
+                                    <User size={18} />
+                                </div>
+                                <span className="text-sm font-medium text-gray-700">Tata Capital Admin</span>
+                                <ChevronDown size={16} className="text-gray-500" />
+                            </button>
+                            
+                            {dropdownOpen && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                                    <button
+                                        onClick={() => {
+                                            handleLogout();
+                                            setDropdownOpen(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                    >
+                                        <LogOut size={16} />
+                                        Logout
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>

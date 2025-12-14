@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "Tata Capital - AI Loan Assistant",
   description: "Experience our AI-powered personal loan assistant for quick and easy loan applications",
   icons: {
-    icon: '/tata.png',
+    icon: '/favicon.jpg',
   },
 };
 

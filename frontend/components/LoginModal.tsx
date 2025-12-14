@@ -34,36 +34,30 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-6 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-2xl font-bold">Admin Login</h2>
-                        <p className="text-blue-100 text-sm mt-1">Loan Management System</p>
-                    </div>
+                <div className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-8 relative">
                     <button
                         onClick={onClose}
-                        className="text-white hover:bg-white/20 p-2 rounded-full transition-colors"
+                        className="absolute top-4 right-4 text-white hover:bg-white/20 p-2 rounded-full transition-colors"
                         aria-label="Close"
                     >
                         <X size={24} />
                     </button>
+                    <div className="text-center">
+                        <h2 className="text-3xl font-bold">Admin Login</h2>
+                        <p className="text-blue-100 text-sm mt-2">Loan Management System</p>
+                    </div>
                 </div>
 
                 {/* Body */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-8 space-y-5">
                     {error && (
                         <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
                             {error}
                         </div>
                     )}
-
-                    <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
-                        <p className="font-medium">Demo Credentials:</p>
-                        <p className="text-xs mt-1">Username: <span className="font-mono font-bold">admin</span></p>
-                        <p className="text-xs">Password: <span className="font-mono font-bold">admin123</span></p>
-                    </div>
 
                     <div>
                         <label className="block text-gray-700 font-medium mb-2">
@@ -75,7 +69,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tata-blue focus:border-transparent"
+                                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-tata-blue focus:border-tata-blue text-gray-900 placeholder:text-gray-400"
                                 placeholder="Enter username"
                                 required
                             />
@@ -92,7 +86,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-tata-blue focus:border-transparent"
+                                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-tata-blue focus:border-tata-blue text-gray-900 placeholder:text-gray-400"
                                 placeholder="Enter password"
                                 required
                             />
@@ -102,10 +96,18 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-tata-blue text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-tata-blue to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? 'Logging in...' : 'Login'}
                     </button>
+
+                    <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm text-center">
+                        <p className="font-semibold mb-2">Demo Credentials:</p>
+                        <div className="flex justify-center gap-4 text-xs">
+                            <span>Username: <span className="font-mono font-bold text-tata-blue">admin</span></span>
+                            <span>Password: <span className="font-mono font-bold text-tata-blue">admin123</span></span>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
