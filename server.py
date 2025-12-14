@@ -139,6 +139,9 @@ async def create_session(request: SessionInitRequest):
             "objection_handling_context": "",
             "sentiment_adaptive_strategy": "",
             "history": [],
+            "kyc_data": {},  # Initialize empty kyc_data to prevent context variable errors
+            "eligibility_evaluation": {},  # Initialize empty eligibility_evaluation
+            "sanction_letter": {},  # Initialize empty sanction_letter
             "_prefetched_kyc": kyc_data,
             "_prefetched_credit": credit_data,
             "_parallel_processing_enabled": True,

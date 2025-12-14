@@ -8,6 +8,13 @@ from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.tool_context import ToolContext
 import os
+import warnings
+
+# Suppress fontconfig warnings on Windows for WeasyPrint
+os.environ['FONTCONFIG_FILE'] = '/dev/null'
+os.environ['FONTCONFIG_PATH'] = '/dev/null'
+warnings.filterwarnings("ignore", category=UserWarning, module="weasyprint")
+warnings.filterwarnings("ignore", category=UserWarning, module="cairocffi")
 
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
@@ -107,15 +114,27 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
         
         # Method 1: Try WeasyPrint (best quality but has font issues on Windows)
         try:
-            from weasyprint import HTML
-            import warnings
+            from weasyprint import HTML, default_url_fetcher
+            import logging
             
-            # Suppress fontconfig warnings on Windows
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore")
+            # Suppress all WeasyPrint logging including fontconfig errors
+            weasyprint_logger = logging.getLogger('weasyprint')
+            weasyprint_logger.setLevel(logging.ERROR)
+            fontconfig_logger = logging.getLogger('fontconfig')
+            fontconfig_logger.setLevel(logging.CRITICAL)
+            
+            # Suppress stderr output temporarily
+            import sys
+            from io import StringIO
+            old_stderr = sys.stderr
+            sys.stderr = StringIO()
+            
+            try:
                 HTML(string=html_content).write_pdf(pdf_path)
-            
-            pdf_generated = True
+                pdf_generated = True
+            finally:
+                sys.stderr = old_stderr
+                
         except Exception as e:
             error_messages.append(f"WeasyPrint failed: {str(e)}")
             
