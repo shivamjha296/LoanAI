@@ -24,6 +24,7 @@ from loan_master_agent.agent import loan_master_agent
 from mock_data.customer_data import CUSTOMERS, get_customer_by_id
 from mock_data.offer_mart import get_pre_approved_offer
 from mock_data.campaign_data import get_campaign_data, get_personalized_opening
+from email_utils import send_email_with_attachment, send_sanction_letter_for_session
 
 # Load environment variables
 load_dotenv(override=True)
@@ -33,22 +34,45 @@ import litellm
 litellm.drop_params = True  # Drop unsupported parameters
 os.environ["LITELLM_DROP_PARAMS"] = "True"
 
-# Monkey patch to fix tool call IDs for Mistral
+# Patch ADK's tool call ID generation at the genai level
+from google import genai
+original_content_init = genai.types.Content.__init__ if hasattr(genai.types.Content, '__init__') else None
+
+# Monkey patch to fix tool call IDs for Mistral at multiple levels
 original_completion = litellm.completion
+tool_call_id_map = {}  # Map long IDs to short IDs
+
+def generate_short_id(long_id: str) -> str:
+    """Generate or retrieve a consistent 9-char ID for a long tool call ID."""
+    if long_id not in tool_call_id_map:
+        tool_call_id_map[long_id] = hashlib.md5(long_id.encode()).hexdigest()[:9]
+    return tool_call_id_map[long_id]
 
 def patched_completion(*args, **kwargs):
     """Wrapper to ensure tool call IDs are Mistral-compatible (9 chars max)."""
+    # Fix tool call IDs in REQUEST (messages being sent TO Mistral)
+    if 'messages' in kwargs:
+        for message in kwargs['messages']:
+            if isinstance(message, dict):
+                # Fix tool_calls in assistant messages
+                if message.get('tool_calls'):
+                    for tool_call in message['tool_calls']:
+                        if 'id' in tool_call and len(tool_call['id']) > 9:
+                            tool_call['id'] = generate_short_id(tool_call['id'])
+                # Fix tool_call_id in tool result messages
+                if message.get('tool_call_id') and len(message['tool_call_id']) > 9:
+                    message['tool_call_id'] = generate_short_id(message['tool_call_id'])
+    
     result = original_completion(*args, **kwargs)
     
-    # Fix tool call IDs in response if present
+    # Fix tool call IDs in RESPONSE (from Mistral)
     if hasattr(result, 'choices') and result.choices:
         for choice in result.choices:
             if hasattr(choice, 'message') and hasattr(choice.message, 'tool_calls') and choice.message.tool_calls:
                 for tool_call in choice.message.tool_calls:
                     if hasattr(tool_call, 'id') and len(tool_call.id) > 9:
-                        # Generate short ID from hash
-                        import hashlib
-                        tool_call.id = hashlib.md5(tool_call.id.encode()).hexdigest()[:9]
+                        short_id = generate_short_id(tool_call.id)
+                        tool_call.id = short_id
     
     return result
 
@@ -322,6 +346,74 @@ async def download_sanction_letter(session_id: str, user_id: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/send-sanction-letter/{session_id}")
+async def send_sanction_letter(session_id: str, user_id: str):
+    """Send the sanction letter PDF via SMTP to the customer's email.
+
+    Requires SMTP credentials in environment: `SMTP_EMAIL` and `SMTP_PASSWORD`.
+    """
+    try:
+        # Get session state
+        session = await session_service.get_session(
+            app_name=APP_NAME, user_id=user_id, session_id=session_id
+        )
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        state = session.state if hasattr(session, 'state') else {}
+
+        sanction_letter = state.get("sanction_letter", {})
+        pdf_file_path = sanction_letter.get("pdf_file_path")
+        if not pdf_file_path or not Path(pdf_file_path).exists():
+            raise HTTPException(status_code=404, detail="Sanction letter PDF not found for this session")
+
+        # Determine recipient email
+        to_email = state.get("customer_email")
+        if not to_email:
+            # fallback to customer record
+            customer = get_customer_by_id(state.get("customer_id"))
+            to_email = customer.get("email") if customer else None
+
+        if not to_email:
+            raise HTTPException(status_code=400, detail="Customer email not available")
+
+        smtp_user = os.getenv("SMTP_EMAIL")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", "465"))
+
+        if not smtp_user or not smtp_password:
+            raise HTTPException(status_code=500, detail="SMTP_EMAIL and SMTP_PASSWORD must be set in environment")
+
+        subject = f"Sanction Letter - {sanction_letter.get('sanction_reference', '')}"
+        body = (
+            f"Dear {state.get('customer_name', '')},\n\n"
+            "Please find attached your sanction letter for the loan application.\n\n"
+            "Regards,\nTata Capital Loan Assistant"
+        )
+
+        # Send email
+        send_email_with_attachment(
+            smtp_user=smtp_user,
+            smtp_password=smtp_password,
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            attachment_path=pdf_file_path,
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+        )
+
+        return {"status": "sent", "to": to_email}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error sending sanction letter: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # Admin API Endpoints
 @app.get("/api/admin/customers")

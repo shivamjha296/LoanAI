@@ -216,12 +216,73 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
         # Store PDF path in state
         tool_context.state["sanction_letter"]["pdf_file_path"] = pdf_path
         
+        # Auto-send email to customer
+        email_status = "not_attempted"
+        email_message = ""
+        try:
+            # Get customer email
+            customer = get_customer_by_id(customer_id)
+            customer_email = tool_context.state.get("customer_email") or customer.get("email")
+            
+            # Check if SMTP is configured
+            smtp_email = os.getenv("SMTP_EMAIL")
+            smtp_password = os.getenv("SMTP_PASSWORD")
+            
+            if smtp_email and smtp_password and customer_email:
+                # Import email utility
+                from email_utils import send_email_with_attachment
+                
+                smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+                smtp_port = int(os.getenv("SMTP_PORT", "465"))
+                
+                subject = f"Sanction Letter - {sanction_letter['sanction_reference']}"
+                body = (
+                    f"Dear {borrower['name']},\n\n"
+                    f"Congratulations! Your loan application has been approved.\n\n"
+                    f"Please find attached your official sanction letter with complete loan details.\n\n"
+                    f"Loan Amount: ₹{loan['sanctioned_amount']:,.0f}\n"
+                    f"Interest Rate: {loan['interest_rate']}% p.a.\n"
+                    f"Tenure: {loan['tenure_months']} months\n"
+                    f"Monthly EMI: ₹{loan['emi']:,.0f}\n\n"
+                    f"This sanction is valid until {sanction_letter['validity_until']}.\n\n"
+                    f"For any queries, please contact us.\n\n"
+                    f"Best Regards,\n"
+                    f"Tata Capital Loan Team"
+                )
+                
+                send_email_with_attachment(
+                    smtp_user=smtp_email,
+                    smtp_password=smtp_password,
+                    to_email=customer_email,
+                    subject=subject,
+                    body=body,
+                    attachment_path=pdf_path,
+                    smtp_host=smtp_host,
+                    smtp_port=smtp_port,
+                )
+                
+                email_status = "sent"
+                email_message = f"Sanction letter emailed to {customer_email}"
+                
+            elif not (smtp_email and smtp_password):
+                email_status = "skipped"
+                email_message = "Email not configured (SMTP credentials missing in .env)"
+            elif not customer_email:
+                email_status = "skipped"
+                email_message = "Customer email not available"
+                
+        except Exception as e:
+            email_status = "failed"
+            email_message = f"Email sending failed: {str(e)}"
+        
         return {
             "status": "success",
             "message": "Sanction letter PDF generated successfully!",
             "pdf_path": pdf_path,
             "pdf_filename": pdf_filename,
-            "file_size": f"{os.path.getsize(pdf_path) / 1024:.2f} KB"
+            "file_size": f"{os.path.getsize(pdf_path) / 1024:.2f} KB",
+            "email_status": email_status,
+            "email_message": email_message
         }
         
     except Exception as e:
