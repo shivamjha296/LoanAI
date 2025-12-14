@@ -39,10 +39,13 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
     try:
         # Get sanction letter data
         sanction_letter = tool_context.state.get("sanction_letter", {})
+        print(f"DEBUG generate_sanction_letter_pdf: sanction_letter in state: {bool(sanction_letter)}")
+        print(f"DEBUG generate_sanction_letter_pdf: sanction_letter keys: {list(sanction_letter.keys()) if sanction_letter else 'None'}")
+        
         if not sanction_letter:
             return {
                 "status": "error",
-                "message": "No sanction letter data found. Please generate sanction letter first."
+                "message": "No sanction letter data found. Please generate sanction letter first using generate_sanction_letter tool."
             }
         
         # Read HTML template
@@ -213,8 +216,12 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
                     "message": f"All PDF generation methods failed: {'; '.join(error_messages)}. Final error: {str(e)}"
                 }
         
-        # Store PDF path in state
+        # Store PDF path in state - ensure sanction_letter dict exists
+        if "sanction_letter" not in tool_context.state:
+            tool_context.state["sanction_letter"] = {}
         tool_context.state["sanction_letter"]["pdf_file_path"] = pdf_path
+        print(f"DEBUG: Stored PDF path in state: {pdf_path}")
+        print(f"DEBUG: Full sanction_letter state: {tool_context.state.get('sanction_letter')}")
         
         # Auto-send email to customer
         email_status = "not_attempted"

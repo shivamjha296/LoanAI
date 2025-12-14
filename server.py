@@ -333,19 +333,62 @@ async def download_sanction_letter(session_id: str, user_id: str):
             app_name=APP_NAME, user_id=user_id, session_id=session_id
         )
         
+        if session is None:
+            print(f"ERROR: Session not found for session_id={session_id}, user_id={user_id}")
+            raise HTTPException(status_code=404, detail="Session not found")
+        
         sanction_letter = session.state.get("sanction_letter", {})
+        print(f"DEBUG: sanction_letter data: {sanction_letter}")
+        
         pdf_file_path = sanction_letter.get("pdf_file_path")
+        print(f"DEBUG: pdf_file_path from state: {pdf_file_path}")
         
-        if not pdf_file_path or not Path(pdf_file_path).exists():
-            raise HTTPException(status_code=404, detail="Sanction letter not found")
+        if not pdf_file_path:
+            print(f"ERROR: pdf_file_path is None or empty in session state")
+            
+            # Try to find PDF by looking for existing files with customer_id
+            sanction_ref = sanction_letter.get("sanction_reference", "")
+            if sanction_ref:
+                pdf_dir = Path("sanction_letters")
+                pattern = f"Sanction_Letter_{user_id}_{sanction_ref}.pdf"
+                possible_path = pdf_dir / pattern
+                print(f"DEBUG: Checking for PDF at: {possible_path}")
+                
+                if possible_path.exists():
+                    print(f"SUCCESS: Found PDF file at fallback location: {possible_path}")
+                    pdf_file_path = str(possible_path)
+                    # Update state for future requests
+                    sanction_letter["pdf_file_path"] = pdf_file_path
+                    session.state["sanction_letter"] = sanction_letter
+                else:
+                    print(f"ERROR: PDF file not found even at fallback location")
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Sanction letter PDF not found. Please ask the agent to generate the PDF using the 'generate_sanction_letter_pdf' function."
+                    )
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Sanction letter PDF path not found in session state. Please generate the sanction letter first."
+                )
         
+        if not Path(pdf_file_path).exists():
+            print(f"ERROR: PDF file does not exist at path: {pdf_file_path}")
+            raise HTTPException(status_code=404, detail=f"Sanction letter PDF file not found at: {pdf_file_path}")
+        
+        print(f"SUCCESS: Returning PDF file from: {pdf_file_path}")
         return FileResponse(
             pdf_file_path,
             media_type="application/pdf",
             filename=f"sanction_letter_{sanction_letter.get('sanction_reference', 'document')}.pdf"
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"ERROR in download_sanction_letter: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error downloading sanction letter: {str(e)}")
 
 
 @app.post("/api/send-sanction-letter/{session_id}")
