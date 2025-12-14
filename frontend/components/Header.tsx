@@ -12,7 +12,7 @@ export default function Header({ onLoginClick }: HeaderProps = {}) {
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-4 h-12 flex items-center justify-between">
         {/* Logo Section */}
         <div className="flex items-center gap-4">
           <Link href="/" className="flex items-center gap-2">

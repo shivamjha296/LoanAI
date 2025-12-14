@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Upload, Paperclip, Mic, MicOff, Volume2, VolumeX, Globe } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
+import Image from 'next/image';
 import AnimatedAvatar from './AnimatedAvatar';
 import { Message } from '@/types';
 import { API_ENDPOINTS } from '@/lib/config';
@@ -307,20 +308,20 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
     };
 
     return (
-        <div className="flex flex-col h-[75vh] min-h-[500px] bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
+        <div className="flex flex-col h-[85vh] min-h-[600px] bg-white rounded-lg shadow-lg border border-gray-100 overflow-hidden">
             {/* Chat Header */}
-            <div className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-4 flex items-center justify-between shadow-md">
+            <div className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-3 flex items-center justify-between shadow-md">
                 <div className="flex items-center gap-3">
                     <div className="relative">
                         <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
-                            <Bot size={24} />
+                            <Image src="/Tia-icon.svg" alt="TIA" width={32} height={32} className="w-8 h-8" />
                         </div>
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white animate-pulse" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-lg">Priya Sharma (AI Agent)</h3>
+                        <h3 className="font-bold text-lg">TIA</h3>
                         <p className="text-xs text-blue-100">
-                            {customerName ? `Helping ${customerName}` : 'Your Loan Manager'} • Online
+                            {customerName ? `Helping ${customerName}` : 'Your Loan Assistant'} • Online
                         </p>
                     </div>
                 </div>
@@ -365,8 +366,16 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
             {/* Messages Area */}
             <div
                 ref={scrollContainerRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white scroll-smooth"
+                className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth relative"
+                style={{
+                    backgroundImage: 'url(/wallpaper.jpeg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                }}
             >
+                {/* Light overlay to make background lighter */}
+                <div className="absolute inset-0 bg-white/70 -z-10"></div>
                 {/* Welcome Screen with Animated Avatar */}
                 {showWelcome && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full space-y-6 animate-fade-in">
@@ -374,9 +383,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
 
                         <div className="bg-white rounded-xl shadow-lg p-6 max-w-md border border-gray-100">
                             <p className="text-gray-700 leading-relaxed text-center">
-                                Welcome! I'm here to help you with your personal loan journey.
-                                Whether you need funds for travel, medical expenses, weddings, or any other purpose,
-                                I'll guide you through every step.
+                                Welcome! I'm TIA, your personal loan assistant. I'll help you find the perfect loan for your needs.
                             </p>
                             <div className="mt-4 pt-4 border-t border-gray-100">
                                 <p className="text-sm text-gray-500 text-center">

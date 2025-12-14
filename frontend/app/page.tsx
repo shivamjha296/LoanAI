@@ -112,11 +112,11 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 px-8 md:px-12 lg:px-16">
             {customers.map((customer) => (
               <div
                 key={customer.id}
-                className="bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden border border-gray-100 group"
+                className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-gray-200 group hover:scale-105 hover:-translate-y-2 hover:border-tata-blue"
               >
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
