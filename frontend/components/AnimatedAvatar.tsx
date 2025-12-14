@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 interface AnimatedAvatarProps {
     size?: 'sm' | 'md' | 'lg';
@@ -71,15 +72,17 @@ export default function AnimatedAvatar({ size = 'md', showGreeting = false }: An
 
                 {/* Avatar Image Container */}
                 <motion.div
-                    className={`${sizeClasses[size]} relative rounded-full bg-gradient-to-br from-tata-blue to-blue-600 flex items-center justify-center overflow-hidden shadow-xl border-4 border-white`}
+                    className={`${sizeClasses[size]} relative rounded-full bg-white flex items-center justify-center overflow-hidden shadow-xl border-4 border-white`}
                     whileHover={{ scale: 1.05 }}
                     transition={{ type: "spring", stiffness: 300 }}
                 >
-                    {/* Humanized Avatar - Using UI Avatars service (no download needed) */}
-                    <img
-                        src="https://ui-avatars.com/api/?name=Priya+Sharma&background=1e40af&color=fff&size=512&bold=true&font-size=0.4"
-                        alt="Priya Sharma"
-                        className="w-full h-full object-cover"
+                    {/* TIA Logo */}
+                    <Image
+                        src="/Tia-icon.svg"
+                        alt="TIA"
+                        width={128}
+                        height={128}
+                        className="w-full h-full object-contain p-2"
                     />
 
                     {/* Thinking Indicator */}
@@ -128,7 +131,7 @@ export default function AnimatedAvatar({ size = 'md', showGreeting = false }: An
                             ease: "easeInOut"
                         }}
                     >
-                        Hi, I'm Priya Sharma
+                        Hi, I'm TIA
                     </motion.h3>
                     <motion.p
                         className="text-sm text-gray-600 max-w-xs"
@@ -136,7 +139,7 @@ export default function AnimatedAvatar({ size = 'md', showGreeting = false }: An
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.8 }}
                     >
-                        Your dedicated loan manager at Tata Capital. I'm here to help you with your personal loan needs.
+                        Your personal loan assistant at Tata Capital.
                     </motion.p>
                 </motion.div>
             )}
