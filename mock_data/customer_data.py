@@ -10,7 +10,7 @@ CUSTOMERS = {
         "age": 35,
         "city": "Mumbai",
         "phone": "9876543210",
-        "email": "rajesh.kumar@email.com",
+        "email": "gauranggd1608@gmail.com",
         "pan_number": "ABCDE1234F",
         "aadhar_number": "1234-5678-9012",
         "occupation": "Software Engineer",

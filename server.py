@@ -34,22 +34,45 @@ import litellm
 litellm.drop_params = True  # Drop unsupported parameters
 os.environ["LITELLM_DROP_PARAMS"] = "True"
 
-# Monkey patch to fix tool call IDs for Mistral
+# Patch ADK's tool call ID generation at the genai level
+from google import genai
+original_content_init = genai.types.Content.__init__ if hasattr(genai.types.Content, '__init__') else None
+
+# Monkey patch to fix tool call IDs for Mistral at multiple levels
 original_completion = litellm.completion
+tool_call_id_map = {}  # Map long IDs to short IDs
+
+def generate_short_id(long_id: str) -> str:
+    """Generate or retrieve a consistent 9-char ID for a long tool call ID."""
+    if long_id not in tool_call_id_map:
+        tool_call_id_map[long_id] = hashlib.md5(long_id.encode()).hexdigest()[:9]
+    return tool_call_id_map[long_id]
 
 def patched_completion(*args, **kwargs):
     """Wrapper to ensure tool call IDs are Mistral-compatible (9 chars max)."""
+    # Fix tool call IDs in REQUEST (messages being sent TO Mistral)
+    if 'messages' in kwargs:
+        for message in kwargs['messages']:
+            if isinstance(message, dict):
+                # Fix tool_calls in assistant messages
+                if message.get('tool_calls'):
+                    for tool_call in message['tool_calls']:
+                        if 'id' in tool_call and len(tool_call['id']) > 9:
+                            tool_call['id'] = generate_short_id(tool_call['id'])
+                # Fix tool_call_id in tool result messages
+                if message.get('tool_call_id') and len(message['tool_call_id']) > 9:
+                    message['tool_call_id'] = generate_short_id(message['tool_call_id'])
+    
     result = original_completion(*args, **kwargs)
     
-    # Fix tool call IDs in response if present
+    # Fix tool call IDs in RESPONSE (from Mistral)
     if hasattr(result, 'choices') and result.choices:
         for choice in result.choices:
             if hasattr(choice, 'message') and hasattr(choice.message, 'tool_calls') and choice.message.tool_calls:
                 for tool_call in choice.message.tool_calls:
                     if hasattr(tool_call, 'id') and len(tool_call.id) > 9:
-                        # Generate short ID from hash
-                        import hashlib
-                        tool_call.id = hashlib.md5(tool_call.id.encode()).hexdigest()[:9]
+                        short_id = generate_short_id(tool_call.id)
+                        tool_call.id = short_id
     
     return result
 
