@@ -29,23 +29,6 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Watermark - Using absolute positioning for better PDF support */
-        .watermark {
-            position: absolute;
-            top: 45%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 60pt;
-            color: rgba(200, 200, 200, 0.25);
-            font-weight: bold;
-            z-index: -1;
-            white-space: nowrap;
-            pointer-events: none;
-            font-family: 'Arial', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 8px;
-        }
-
         .container {
             width: 100%;
             max-width: 750px;
@@ -239,8 +222,6 @@
     </style>
 </head>
 <body>
-
-    <div class="watermark">SANCTION LETTER</div>
 
     <div class="container">
         
