@@ -444,8 +444,8 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
             </div>
 
             {/* Input Area */}
-            <div className="p-4 bg-white border-t border-gray-100">
-                <div className="flex gap-2">
+            <div className="p-4 bg-transparent">
+                <div className="flex gap-3 items-center">
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -456,7 +456,7 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isLoading || uploadingFile}
-                        className="bg-gray-100 text-gray-600 p-2 rounded-md hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-white text-tata-blue p-3 rounded-full hover:bg-blue-50 transition-all shadow-sm border border-gray-200 hover:border-tata-blue disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Upload Salary Slip"
                         aria-label="Upload Salary Slip"
                     >
@@ -474,27 +474,27 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder={`Type your message in ${selectedLanguage.name}...`}
-                            className="w-full border border-gray-300 rounded-md pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-tata-blue focus:border-transparent text-gray-900 placeholder-gray-500"
+                            className="w-full border-2 border-tata-blue/30 rounded-full pl-5 pr-12 py-3 focus:outline-none focus:border-tata-blue focus:shadow-lg focus:shadow-tata-blue/10 text-gray-900 placeholder-gray-400 bg-white transition-all"
                             disabled={isLoading || uploadingFile}
                             aria-label="Type your message"
                         />
                         <button
                             onClick={toggleListening}
                             className={clsx(
-                                "absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full transition-colors",
-                                isListening ? "bg-red-100 text-red-600 animate-pulse" : "text-gray-400 hover:text-tata-blue"
+                                "absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all",
+                                isListening ? "bg-red-100 text-red-600 animate-pulse" : "text-gray-400 hover:text-tata-blue hover:bg-blue-50"
                             )}
                             title={isListening ? "Stop listening" : "Start voice input"}
                             disabled={isLoading || uploadingFile}
                         >
-                            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
                         </button>
                     </div>
 
                     <button
                         onClick={handleSend}
                         disabled={isLoading || !input.trim() || uploadingFile}
-                        className="bg-tata-red text-white p-2 rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-gradient-to-r from-tata-blue to-blue-600 text-white p-3 rounded-full hover:shadow-lg hover:shadow-tata-blue/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Send message"
                     >
                         <Send size={20} />

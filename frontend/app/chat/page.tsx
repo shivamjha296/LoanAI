@@ -53,7 +53,7 @@ function ChatContent() {
 
     return (
         <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1 lg:w-[70%]">
+            <div className="flex-1 lg:w-[75%]">
                 <ChatWindow
                     sessionId={sessionId}
                     userId={userId}
@@ -61,7 +61,7 @@ function ChatContent() {
                     customerName={state?.customer_name}
                 />
             </div>
-            <div className="lg:w-[30%]">
+            <div className="lg:w-[25%]">
                 <StatusPanel
                     state={state}
                     sessionId={sessionId}
