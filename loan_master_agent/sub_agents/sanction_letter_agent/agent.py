@@ -107,38 +107,68 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
         # Generate PDF filename
         pdf_filename = f"Sanction_Letter_{customer_id}_{sanction_letter['sanction_reference']}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
+        html_path = pdf_path.replace('.pdf', '.html')
+        
+        # Save HTML file first (for browser-based printing)
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
         
         # Try multiple PDF generation methods with error handling
         pdf_generated = False
         error_messages = []
         
-        # Method 1: Try WeasyPrint (best quality but has font issues on Windows)
+        # Method 1: Try Playwright (chromium headless browser - best quality, exact browser rendering)
         try:
-            from weasyprint import HTML, default_url_fetcher
-            import logging
+            from playwright.sync_api import sync_playwright
             
-            # Suppress all WeasyPrint logging including fontconfig errors
-            weasyprint_logger = logging.getLogger('weasyprint')
-            weasyprint_logger.setLevel(logging.ERROR)
-            fontconfig_logger = logging.getLogger('fontconfig')
-            fontconfig_logger.setLevel(logging.CRITICAL)
+            with sync_playwright() as p:
+                browser = p.chromium.launch()
+                page = browser.new_page()
+                page.goto(f'file:///{html_path.replace(os.sep, "/")}')
+                page.pdf(path=pdf_path, format='A4', print_background=True, margin={
+                    'top': '15mm',
+                    'right': '15mm',
+                    'bottom': '15mm',
+                    'left': '15mm'
+                })
+                browser.close()
             
-            # Suppress stderr output temporarily
-            import sys
-            from io import StringIO
-            old_stderr = sys.stderr
-            sys.stderr = StringIO()
+            pdf_generated = True
             
-            try:
-                HTML(string=html_content).write_pdf(pdf_path)
-                pdf_generated = True
-            finally:
-                sys.stderr = old_stderr
-                
+        except ImportError:
+            error_messages.append("Playwright not installed (pip install playwright && playwright install chromium)")
         except Exception as e:
-            error_messages.append(f"WeasyPrint failed: {str(e)}")
-            
-            # Method 2: Fallback to xhtml2pdf (ReportLab-based)
+            error_messages.append(f"Playwright failed: {str(e)}")
+        
+        # Method 2: Try WeasyPrint (fallback)
+        if not pdf_generated:
+            try:
+                from weasyprint import HTML
+                import logging
+                
+                # Suppress all WeasyPrint logging including fontconfig errors
+                weasyprint_logger = logging.getLogger('weasyprint')
+                weasyprint_logger.setLevel(logging.ERROR)
+                fontconfig_logger = logging.getLogger('fontconfig')
+                fontconfig_logger.setLevel(logging.CRITICAL)
+                
+                # Suppress stderr output temporarily
+                import sys
+                from io import StringIO
+                old_stderr = sys.stderr
+                sys.stderr = StringIO()
+                
+                try:
+                    HTML(string=html_content).write_pdf(pdf_path)
+                    pdf_generated = True
+                finally:
+                    sys.stderr = old_stderr
+                    
+            except Exception as e:
+                error_messages.append(f"WeasyPrint failed: {str(e)}")
+        
+        # Method 3: Fallback to xhtml2pdf (ReportLab-based)
+        if not pdf_generated:
             try:
                 from xhtml2pdf import pisa
                 
@@ -155,20 +185,17 @@ def generate_sanction_letter_pdf(customer_id: str, tool_context: ToolContext) ->
                 error_messages.append(f"xhtml2pdf failed: {str(e)}")
         
         if not pdf_generated:
-            # Method 3: Last resort - save as HTML with PDF extension (can be printed to PDF)
+            # Method 4: Last resort - HTML file saved, can be printed to PDF manually
             try:
-                with open(pdf_path.replace('.pdf', '.html'), 'w', encoding='utf-8') as f:
-                    f.write(html_content)
-                
                 # Store HTML path as well
-                tool_context.state["sanction_letter_html_path"] = pdf_path.replace('.pdf', '.html')
+                tool_context.state["sanction_letter_html_path"] = html_path
                 
                 return {
                     "status": "partial",
-                    "message": "PDF generation libraries had issues. HTML version saved. Please print to PDF from browser or install: pip install xhtml2pdf",
-                    "html_path": pdf_path.replace('.pdf', '.html'),
+                    "message": "PDF generation libraries had issues. HTML version saved. Please install Playwright for best quality: pip install playwright && playwright install chromium",
+                    "html_path": html_path,
                     "errors": error_messages,
-                    "suggestion": "Open the HTML file in browser and use 'Print to PDF' feature"
+                    "suggestion": "Open the HTML file in browser and use 'Print to PDF' feature (Ctrl+P)"
                 }
             except Exception as e:
                 return {
