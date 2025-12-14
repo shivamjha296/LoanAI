@@ -22,6 +22,7 @@ from loan_master_agent.agent import loan_master_agent
 from mock_data.customer_data import CUSTOMERS, get_customer_by_id
 from mock_data.offer_mart import get_pre_approved_offer
 from mock_data.campaign_data import get_campaign_data, get_personalized_opening
+from email_utils import send_email_with_attachment, send_sanction_letter_for_session
 
 # Load environment variables
 load_dotenv(override=True)
@@ -287,6 +288,74 @@ async def download_sanction_letter(session_id: str, user_id: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/send-sanction-letter/{session_id}")
+async def send_sanction_letter(session_id: str, user_id: str):
+    """Send the sanction letter PDF via SMTP to the customer's email.
+
+    Requires SMTP credentials in environment: `SMTP_EMAIL` and `SMTP_PASSWORD`.
+    """
+    try:
+        # Get session state
+        session = await session_service.get_session(
+            app_name=APP_NAME, user_id=user_id, session_id=session_id
+        )
+        if session is None:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        state = session.state if hasattr(session, 'state') else {}
+
+        sanction_letter = state.get("sanction_letter", {})
+        pdf_file_path = sanction_letter.get("pdf_file_path")
+        if not pdf_file_path or not Path(pdf_file_path).exists():
+            raise HTTPException(status_code=404, detail="Sanction letter PDF not found for this session")
+
+        # Determine recipient email
+        to_email = state.get("customer_email")
+        if not to_email:
+            # fallback to customer record
+            customer = get_customer_by_id(state.get("customer_id"))
+            to_email = customer.get("email") if customer else None
+
+        if not to_email:
+            raise HTTPException(status_code=400, detail="Customer email not available")
+
+        smtp_user = os.getenv("SMTP_EMAIL")
+        smtp_password = os.getenv("SMTP_PASSWORD")
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        smtp_port = int(os.getenv("SMTP_PORT", "465"))
+
+        if not smtp_user or not smtp_password:
+            raise HTTPException(status_code=500, detail="SMTP_EMAIL and SMTP_PASSWORD must be set in environment")
+
+        subject = f"Sanction Letter - {sanction_letter.get('sanction_reference', '')}"
+        body = (
+            f"Dear {state.get('customer_name', '')},\n\n"
+            "Please find attached your sanction letter for the loan application.\n\n"
+            "Regards,\nTata Capital Loan Assistant"
+        )
+
+        # Send email
+        send_email_with_attachment(
+            smtp_user=smtp_user,
+            smtp_password=smtp_password,
+            to_email=to_email,
+            subject=subject,
+            body=body,
+            attachment_path=pdf_file_path,
+            smtp_host=smtp_host,
+            smtp_port=smtp_port,
+        )
+
+        return {"status": "sent", "to": to_email}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error sending sanction letter: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # Admin API Endpoints
 @app.get("/api/admin/customers")
