@@ -82,6 +82,7 @@ async def get_customers():
         for customer_id, customer_data in CUSTOMERS.items()
     ]
 
+@app.post("/api/session")
 @app.post("/api/init-session")
 async def create_session(request: SessionInitRequest):
     """Initialize a new chat session for a customer."""
@@ -283,6 +284,71 @@ async def download_sanction_letter(session_id: str, user_id: str):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Admin API Endpoints
+@app.get("/api/admin/customers")
+async def get_admin_customers():
+    """Get all customers for admin panel."""
+    from mock_data.customer_data import CUSTOMERS
+    return [
+        {
+            "id": customer_data["customer_id"],
+            "name": customer_data["name"],
+            "age": customer_data.get("age", "N/A"),
+            "city": customer_data["city"],
+            "credit_score": customer_data["credit_score"],
+            "pre_approved_limit": customer_data["pre_approved_limit"],
+            "monthly_salary": customer_data["monthly_salary"],
+        }
+        for customer_id, customer_data in CUSTOMERS.items()
+    ]
+
+@app.get("/api/admin/offers")
+async def get_admin_offers():
+    """Get all offers from offer mart."""
+    from mock_data.offer_mart import LOAN_OFFERS
+    offers = []
+    for customer_id, offer_data in LOAN_OFFERS.items():
+        offers.append({
+            "customer_id": customer_id,
+            "amount": offer_data.get("pre_approved_amount", 0),
+            "interest_rate": offer_data.get("interest_rate", 0),
+            "tenure_options": f"{offer_data.get('max_tenure_months', 0)} months",
+            "processing_fee": int(offer_data.get("pre_approved_amount", 0) * offer_data.get("processing_fee_percent", 0) / 100),
+        })
+    return offers
+
+@app.get("/api/admin/kyc")
+async def get_admin_kyc():
+    """Get all KYC data from CRM."""
+    from mock_data.crm_data import CRM_DATA
+    return [
+        {
+            "customer_id": customer_id,
+            "name": kyc_data.get("name", "N/A"),
+            "pan_number": kyc_data.get("pan_number", "N/A"),
+            "aadhar_number": kyc_data.get("aadhar_number", "N/A"),
+            "phone_verified": kyc_data.get("phone_verified", False),
+            "kyc_status": kyc_data.get("kyc_status", "PENDING"),
+        }
+        for customer_id, kyc_data in CRM_DATA.items()
+    ]
+
+@app.get("/api/admin/credit")
+async def get_admin_credit():
+    """Get all credit scores from credit bureau."""
+    from mock_data.credit_bureau import CREDIT_SCORES
+    return [
+        {
+            "customer_id": customer_id,
+            "credit_score": credit_data.get("credit_score", 0),
+            "score_range": credit_data.get("score_range", "N/A"),
+            "total_accounts": credit_data.get("credit_history", {}).get("total_accounts", 0),
+            "active_accounts": credit_data.get("credit_history", {}).get("active_accounts", 0),
+            "payment_history": credit_data.get("credit_history", {}).get("payment_history", "N/A"),
+        }
+        for customer_id, credit_data in CREDIT_SCORES.items()
+    ]
 
 if __name__ == "__main__":
     import uvicorn

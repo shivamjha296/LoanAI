@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import LoginModal from '@/components/LoginModal';
 import { User, CreditCard, MapPin, ArrowRight, Loader2, AlertCircle, Video } from 'lucide-react';
 import clsx from 'clsx';
 import Link from 'next/link';
@@ -17,7 +18,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState<string | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const router = useRouter();
+
+  const handleLogin = (username: string, password: string) => {
+    // Store admin session
+    localStorage.setItem('adminLoggedIn', 'true');
+    router.push('/admin');
+  };
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -54,7 +62,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Header />
+      <Header onLoginClick={() => setIsLoginModalOpen(true)} />
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={handleLogin}
+      />
 
       <main className="flex-1 container mx-auto px-4 py-12">
         <div className="text-center mb-12">

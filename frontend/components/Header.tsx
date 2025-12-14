@@ -3,7 +3,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Menu, Search, User, X } from 'lucide-react';
 
-export default function Header() {
+interface HeaderProps {
+  onLoginClick?: () => void;
+}
+
+export default function Header({ onLoginClick }: HeaderProps = {}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -51,6 +55,7 @@ export default function Header() {
             <Search size={20} />
           </button>
           <button
+            onClick={onLoginClick}
             className="hidden md:flex items-center gap-2 bg-tata-red text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium shadow-sm hover:shadow-md"
             aria-label="Login to your account"
           >
