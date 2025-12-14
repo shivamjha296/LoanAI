@@ -366,8 +366,16 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
             {/* Messages Area */}
             <div
                 ref={scrollContainerRef}
-                className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white scroll-smooth"
+                className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth relative"
+                style={{
+                    backgroundImage: 'url(/wallpaper.jpeg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                }}
             >
+                {/* Light overlay to make background lighter */}
+                <div className="absolute inset-0 bg-white/70 -z-10"></div>
                 {/* Welcome Screen with Animated Avatar */}
                 {showWelcome && messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full space-y-6 animate-fade-in">
