@@ -47,8 +47,6 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
     const fileInputRef = useRef<HTMLInputElement>(null);
     const recognitionRef = useRef<any>(null);
     const synthRef = useRef<SpeechSynthesis | null>(null);
-    const autoFollowUpTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const isAutoFollowUpRef = useRef<boolean>(false);
 
     const scrollToBottom = () => {
         if (scrollContainerRef.current) {
@@ -154,74 +152,8 @@ export default function ChatWindow({ sessionId, userId, onStateUpdate, customerN
         }
     }, [messages, autoSpeak]);
 
-    // Auto-follow-up: If agent sends a message and user doesn't respond in 5 seconds
-    useEffect(() => {
-        // Clear any existing timer
-        if (autoFollowUpTimerRef.current) {
-            clearTimeout(autoFollowUpTimerRef.current);
-            autoFollowUpTimerRef.current = null;
-        }
-
-        const lastMessage = messages[messages.length - 1];
-        
-        // Only trigger if last message is from assistant and not already loading
-        if (lastMessage && lastMessage.role === 'assistant' && !isLoading && messages.length > 0) {
-            autoFollowUpTimerRef.current = setTimeout(async () => {
-                // Check if user still hasn't responded
-                const currentLastMessage = messages[messages.length - 1];
-                if (currentLastMessage?.role === 'assistant' && !isLoading) {
-                    // Set flag to prevent infinite loop
-                    if (isAutoFollowUpRef.current) return;
-                    isAutoFollowUpRef.current = true;
-
-                    setIsLoading(true);
-                    try {
-                        const response = await axios.post(API_ENDPOINTS.chat, {
-                            session_id: sessionId,
-                            user_id: userId,
-                            message: "[System: User hasn't responded. Continue the conversation proactively with a helpful follow-up or clarification.]",
-                            language: selectedLanguage.name,
-                        });
-
-                        const assistantMessage: Message = {
-                            id: `${Date.now()}-${Math.random()}`,
-                            role: 'assistant',
-                            content: response.data.response,
-                            timestamp: new Date(),
-                        };
-
-                        setMessages(prev => [...prev, assistantMessage]);
-                        onStateUpdate();
-                    } catch (error) {
-                        console.error('Error in auto-follow-up:', error);
-                    } finally {
-                        setIsLoading(false);
-                        // Reset flag after a delay to allow future auto-follow-ups
-                        setTimeout(() => {
-                            isAutoFollowUpRef.current = false;
-                        }, 10000); // Reset after 10 seconds
-                    }
-                }
-            }, 5000); // 5 second delay
-        }
-
-        // Cleanup timer on unmount or when messages change
-        return () => {
-            if (autoFollowUpTimerRef.current) {
-                clearTimeout(autoFollowUpTimerRef.current);
-            }
-        };
-    }, [messages, isLoading, sessionId, userId, selectedLanguage.name, onStateUpdate]);
-
     const handleSend = async () => {
         if (!input.trim() || isLoading) return;
-
-        // Clear auto-follow-up timer when user sends a message
-        if (autoFollowUpTimerRef.current) {
-            clearTimeout(autoFollowUpTimerRef.current);
-            autoFollowUpTimerRef.current = null;
-        }
-        isAutoFollowUpRef.current = false;
 
         // Hide welcome screen on first message
         if (showWelcome) {
