@@ -248,6 +248,74 @@ async def get_state(session_id: str, user_id: str):
 async def chat(request: ChatRequest):
     """Process a user message."""
     try:
+        # Check if session exists, if not create it automatically
+        existing_session = await session_service.get_session(
+            app_name=APP_NAME,
+            user_id=request.user_id,
+            session_id=request.session_id
+        )
+        
+        if existing_session is None:
+            print(f"Session not found, creating new session: {request.session_id}")
+            # Auto-create session with default state
+            customer = get_customer_by_id(request.user_id)
+            if customer:
+                campaign_data = get_campaign_data(request.user_id)
+                offers = get_pre_approved_offer(request.user_id)
+                from mock_data.crm_data import get_kyc_data
+                from mock_data.credit_bureau import get_credit_score
+                
+                kyc_data = get_kyc_data(request.user_id)
+                credit_data = get_credit_score(request.user_id)
+                personalized_opening = get_personalized_opening(
+                    request.user_id,
+                    customer["name"],
+                    campaign_data
+                )
+                
+                initial_state = {
+                    "customer_id": request.user_id,
+                    "customer_name": customer["name"],
+                    "customer_phone": customer.get("phone", "N/A"),
+                    "customer_city": customer["city"],
+                    "customer_salary": customer["monthly_salary"],
+                    "pre_approved_limit": customer["pre_approved_limit"],
+                    "credit_score": customer["credit_score"],
+                    "current_offer": offers.get("offer_1", {}),
+                    "loan_application": {},
+                    "application_status": "NOT_STARTED",
+                    "interaction_history": [],
+                    "campaign_source": campaign_data.get("source", "Direct"),
+                    "customer_intent": campaign_data.get("intent", "GENERAL"),
+                    "urgency_level": campaign_data.get("urgency_level", "MEDIUM"),
+                    "campaign_keyword": campaign_data.get("keyword", "personal loan"),
+                    "customer_type": campaign_data.get("customer_type", "NEW_CUSTOMER"),
+                    "relationship_tenure_years": campaign_data.get("relationship_tenure_years", 0),
+                    "payment_history": campaign_data.get("payment_history", "N/A"),
+                    "current_loans_count": campaign_data.get("current_loans_count", 0),
+                    "previous_interactions_count": campaign_data.get("previous_interactions_count", 0),
+                    "offer_expiry_hours": campaign_data.get("offer_expiry_hours", 120),
+                    "persuasion_strategy": "",
+                    "personalized_opening": personalized_opening,
+                    "objection_handling_context": "",
+                    "sentiment_adaptive_strategy": "",
+                    "history": [],
+                    "kyc_data": {},
+                    "eligibility_evaluation": {},
+                    "sanction_letter": {},
+                    "_prefetched_kyc": kyc_data,
+                    "_prefetched_credit": credit_data,
+                    "_parallel_processing_enabled": True,
+                }
+                
+                await session_service.create_session(
+                    app_name=APP_NAME,
+                    user_id=request.user_id,
+                    session_id=request.session_id,
+                    state=initial_state
+                )
+                print(f"Session created successfully: {request.session_id}")
+        
         # Create runner
         runner = Runner(
             agent=loan_master_agent,

@@ -51,7 +51,7 @@ CUSTOMERS = {
         "age": 42,
         "city": "Ahmedabad",
         "phone": "9876543212",
-        "email": "sjha13780@gmail.com",
+        "email": "2023.gaurang.gade@ves.ac.in",
         "pan_number": "KLMNO9012P",
         "aadhar_number": "3456-7890-1234",
         "occupation": "Business Owner",

@@ -13,6 +13,8 @@ xhtml2pdf              # Fallback PDF generator (ReportLab-based, more Windows-f
 PyPDF2                  # PDF text extraction
 Pillow                  # Image processing
 pytesseract             # OCR for images (requires Tesseract-OCR installed on system)
+pdf2image               # Convert PDF pages to images (for scanned PDFs)
+easyocr                 # Alternative OCR (no external dependencies, deep learning based)
 
 # Additional Dependencies (installed automatically by weasyprint)
 # - cffi

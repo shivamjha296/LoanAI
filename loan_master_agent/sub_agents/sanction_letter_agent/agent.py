@@ -325,20 +325,35 @@ def generate_sanction_letter(customer_id: str, tool_context: ToolContext) -> dic
     approval_reference = tool_context.state.get("approval_reference", "")
     current_offer = tool_context.state.get("current_offer", {})
     
-    if not loan_application:
-        return {
-            "status": "error",
-            "message": "Loan application details not found."
-        }
-    
     # Get customer details
     customer = get_customer_by_id(customer_id)
     if not customer:
         return {"status": "error", "message": "Customer not found"}
     
     # Calculate EMI and other details
+    # Try to get loan amount from multiple sources
     loan_amount = loan_application.get("loan_amount", 0)
+    
+    # Fallback: check if loan_amount is in eligibility_evaluation
+    if loan_amount == 0:
+        eligibility = tool_context.state.get("eligibility_evaluation", {})
+        loan_amount = tool_context.state.get("requested_amount", 0)
+        
+    # Final fallback: use pre_approved_limit
+    if loan_amount == 0:
+        loan_amount = tool_context.state.get("pre_approved_limit", 0)
+    
+    if loan_amount == 0:
+        return {
+            "status": "error",
+            "message": "Loan amount not found. Please initiate loan application first."
+        }
+    
     tenure = loan_application.get("tenure_months", 60)
+    
+    # Fallback for tenure
+    if tenure == 0:
+        tenure = tool_context.state.get("tenure", 60)
     interest_rate = current_offer.get("interest_rate", 12.0)
     processing_fee_percent = 3.5  # Tata Capital standard processing fee
     loan_purpose = loan_application.get("purpose", "Personal Use")

@@ -14,6 +14,12 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
+# Configure Tesseract OCR path
+try:
+    import tesseract_config
+except:
+    pass  # Tesseract config is optional
+
 from mock_data.credit_bureau import get_credit_score, check_eligibility_by_score
 from mock_data.offer_mart import get_pre_approved_offer, calculate_emi, check_loan_eligibility
 from mock_data.customer_data import get_customer_by_id
@@ -194,7 +200,7 @@ def evaluate_loan_eligibility(
             "suggestion": "Please work on improving your credit score by: 1) Clearing any pending dues, 2) Maintaining timely EMI/credit card payments, 3) Reducing credit utilization below 30%, 4) Avoiding multiple loan applications. Check back after 6 months of good credit behavior."
         }
     
-    # Get customer salary for EMI calculation
+    # Get customer salary only for reference
     customer = get_customer_by_id(customer_id)
     if not customer:
         return {"status": "error", "message": "Customer not found"}
@@ -202,11 +208,30 @@ def evaluate_loan_eligibility(
     monthly_salary = customer["monthly_salary"]
     
     # Check eligibility against pre-approved limits
-    eligibility = check_loan_eligibility(customer_id, requested_amount, monthly_salary)
+    # For conditional approvals (exceeding pre-approved), pass None to trigger salary slip requirement
+    # For instant approvals (within pre-approved), we can use registered salary
+    
+    # First check if amount is within pre-approved limit
+    offer_result = get_pre_approved_offer(customer_id)
+    if offer_result["status"] == "success":
+        pre_approved_limit = offer_result["offer"]["pre_approved_amount"]
+        
+        # If within pre-approved limit, can use registered salary
+        if requested_amount <= pre_approved_limit:
+            eligibility = check_loan_eligibility(customer_id, requested_amount, monthly_salary)
+        else:
+            # Exceeds pre-approved - don't pass salary to force verification requirement
+            eligibility = check_loan_eligibility(customer_id, requested_amount, None)
+    else:
+        # If no pre-approved offer, use registered salary
+        eligibility = check_loan_eligibility(customer_id, requested_amount, monthly_salary)
     
     # Store evaluation result in state
     tool_context.state["eligibility_evaluation"] = eligibility
     tool_context.state["credit_score"] = credit_score
+    
+    # Store requested amount for later use
+    tool_context.state["requested_amount"] = requested_amount
     
     # Add to interaction history
     current_history = tool_context.state.get("interaction_history", [])
@@ -218,6 +243,11 @@ def evaluate_loan_eligibility(
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     })
     tool_context.state["interaction_history"] = current_history
+    
+    # If conditional, add explicit salary slip requirement to result
+    if eligibility.get("approval_type") == "CONDITIONAL":
+        eligibility["next_step"] = "REQUEST_SALARY_SLIP_UPLOAD"
+        eligibility["instruction_to_agent"] = "⚠️ DO NOT calculate or show EMI. Request customer to upload salary slip immediately."
     
     return eligibility
 
@@ -274,6 +304,7 @@ Reference ID: """ + request["request_id"]
 def extract_text_from_pdf(file_path: str) -> str:
     """
     Extracts text from PDF file.
+    Fallback to OCR if PDF is image-based (scanned).
     
     Args:
         file_path: Path to PDF file
@@ -288,8 +319,91 @@ def extract_text_from_pdf(file_path: str) -> str:
             pdf_reader = PyPDF2.PdfReader(file)
             text = ""
             for page in pdf_reader.pages:
-                text += page.extract_text() + "\n"
-        return text.strip()
+                page_text = page.extract_text()
+                text += page_text + "\n"
+        
+        text = text.strip()
+        
+        # If extracted text is too short, PDF is likely image-based (scanned)
+        if len(text) < 50:
+            print(f"PDF appears to be image-based (only {len(text)} chars extracted). Trying OCR...")
+            
+            # Try EasyOCR first (no external dependencies)
+            try:
+                import easyocr
+                from pdf2image import convert_from_path
+                
+                print("Using EasyOCR for PDF extraction...")
+                
+                # Convert PDF to images
+                images = convert_from_path(file_path)
+                
+                # Initialize EasyOCR reader
+                reader = easyocr.Reader(['en'], gpu=False)
+                
+                ocr_text = ""
+                for i, image in enumerate(images):
+                    print(f"  EasyOCR processing page {i+1}/{len(images)}...")
+                    # Save temp image
+                    import tempfile
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                        image.save(tmp.name, 'PNG')
+                        results = reader.readtext(tmp.name)
+                        page_text = ' '.join([result[1] for result in results])
+                        ocr_text += page_text + "\n"
+                        import os
+                        os.unlink(tmp.name)
+                
+                ocr_text = ocr_text.strip()
+                
+                if len(ocr_text) > len(text):
+                    print(f"  ✓ EasyOCR successful! Extracted {len(ocr_text)} characters")
+                    return ocr_text
+            
+            except ImportError as e:
+                print(f"  EasyOCR not available: {str(e)}, trying Tesseract...")
+            except Exception as e:
+                print(f"  EasyOCR failed: {str(e)}, trying Tesseract...")
+            
+            # Fallback to Tesseract OCR
+            try:
+                from pdf2image import convert_from_path
+                from PIL import Image
+                import pytesseract
+                
+                print("Using Tesseract for PDF extraction...")
+                
+                # Convert PDF to images
+                images = convert_from_path(file_path)
+                
+                ocr_text = ""
+                for i, image in enumerate(images):
+                    print(f"  Tesseract processing page {i+1}/{len(images)}...")
+                    page_text = pytesseract.image_to_string(image)
+                    ocr_text += page_text + "\n"
+                
+                ocr_text = ocr_text.strip()
+                
+                if len(ocr_text) > len(text):
+                    print(f"  ✓ Tesseract successful! Extracted {len(ocr_text)} characters")
+                    return ocr_text
+                else:
+                    return text
+            
+            except ImportError as e:
+                if "pdf2image" in str(e):
+                    return f"ERROR: PDF is image-based. Please install: pip install pdf2image easyocr\nOr convert PDF to image (PNG/JPG) and upload again."
+                elif "pytesseract" in str(e):
+                    return f"ERROR: PDF is image-based. Install EasyOCR (no external dependencies): pip install easyocr"
+                return f"ERROR: {str(e)}"
+            except Exception as e:
+                print(f"  Both OCR methods failed: {str(e)}")
+                # Return original text if OCR fails
+                if len(text) > 0:
+                    return text
+                return f"ERROR: PDF is image-based and OCR failed. Try: pip install easyocr"
+        
+        return text
     except ImportError:
         return "ERROR: PyPDF2 not installed. Install with: pip install PyPDF2"
     except Exception as e:
@@ -299,6 +413,7 @@ def extract_text_from_pdf(file_path: str) -> str:
 def extract_text_from_image(file_path: str) -> str:
     """
     Extracts text from image file using OCR.
+    Tries EasyOCR first (no external dependencies), falls back to Tesseract.
     
     Args:
         file_path: Path to image file
@@ -306,6 +421,41 @@ def extract_text_from_image(file_path: str) -> str:
     Returns:
         str: Extracted text
     """
+    # Try EasyOCR first (no external dependencies required)
+    try:
+        import easyocr
+        from PIL import Image
+        
+        print(f"Using EasyOCR for text extraction...")
+        
+        # Open image to check size
+        image = Image.open(file_path)
+        print(f"Processing image: {image.size} pixels, mode: {image.mode}")
+        
+        # Initialize EasyOCR reader (English)
+        # On first run, it will download the model (~40MB)
+        reader = easyocr.Reader(['en'], gpu=False)
+        
+        # Perform OCR
+        results = reader.readtext(file_path)
+        
+        # Extract text from results
+        text = ' '.join([result[1] for result in results])
+        text = text.strip()
+        
+        print(f"EasyOCR extracted {len(text)} characters from image")
+        
+        if len(text) > 0:
+            return text
+        else:
+            print("EasyOCR returned empty result, trying Tesseract as fallback...")
+    
+    except ImportError:
+        print("EasyOCR not available, trying Tesseract...")
+    except Exception as e:
+        print(f"EasyOCR failed: {str(e)}, trying Tesseract as fallback...")
+    
+    # Fallback to Tesseract
     try:
         from PIL import Image
         import pytesseract
@@ -313,10 +463,15 @@ def extract_text_from_image(file_path: str) -> str:
         # Open image
         image = Image.open(file_path)
         
+        print(f"Processing image with Tesseract: {image.size} pixels, mode: {image.mode}")
+        
         # Perform OCR
         text = pytesseract.image_to_string(image)
         
-        return text.strip()
+        text = text.strip()
+        print(f"Tesseract extracted {len(text)} characters from image")
+        
+        return text
     except ImportError as e:
         if "PIL" in str(e):
             return "ERROR: Pillow not installed. Install with: pip install Pillow"
@@ -324,7 +479,23 @@ def extract_text_from_image(file_path: str) -> str:
             return "ERROR: pytesseract not installed. Install with: pip install pytesseract"
         return f"ERROR: {str(e)}"
     except Exception as e:
-        return f"ERROR: Failed to extract text from image: {str(e)}"
+        error_msg = str(e)
+        if "tesseract" in error_msg.lower():
+            return """ERROR: Both OCR methods failed.
+
+SOLUTION 1 (Recommended - No installation needed):
+  pip install easyocr
+  This is a pure Python package with no external dependencies.
+
+SOLUTION 2 (Traditional method):
+  Install Tesseract OCR system binary:
+  - Windows: https://github.com/UB-Mannheim/tesseract/wiki
+  - Mac: brew install tesseract
+  - Linux: sudo apt-get install tesseract-ocr
+
+SOLUTION 3 (Workaround):
+  Create a text-based PDF instead of uploading images."""
+        return f"ERROR: Failed to extract text from image: {error_msg}"
 
 
 def extract_salary_from_text(text: str) -> dict:
@@ -565,7 +736,16 @@ def verify_salary_with_amount(
     # Get requested loan details from state
     loan_application = tool_context.state.get("loan_application", {})
     requested_amount = loan_application.get("loan_amount", 0)
+    
+    # Fallback: check state for requested_amount
+    if requested_amount == 0:
+        requested_amount = tool_context.state.get("requested_amount", 0)
+    
     tenure = loan_application.get("tenure_months", 60)
+    
+    # Fallback for tenure
+    if tenure == 0:
+        tenure = tool_context.state.get("tenure", 60)
     
     # Get offer details
     offer_result = get_pre_approved_offer(customer_id)
@@ -609,21 +789,39 @@ def verify_salary_with_amount(
         }
     else:
         tool_context.state["salary_verification_passed"] = False
+        tool_context.state["application_status"] = "REJECTED"
+        tool_context.state["rejection_reason"] = "EMI exceeds 50% of verified salary"
+        
         # Calculate max eligible amount
         max_emi = verified_salary * 0.5
         monthly_rate = interest_rate / (12 * 100)
         max_amount = max_emi * (((1 + monthly_rate) ** tenure) - 1) / (monthly_rate * ((1 + monthly_rate) ** tenure))
         
+        # Add rejection to history
+        current_history.append({
+            "action": "loan_rejected",
+            "reason": "EMI exceeds 50% of verified salary",
+            "verified_salary": verified_salary,
+            "emi": emi,
+            "emi_to_salary_ratio": emi_to_salary_ratio,
+            "max_eligible_amount": max_amount,
+            "timestamp": current_time
+        })
+        tool_context.state["interaction_history"] = current_history
+        
         return {
-            "status": "success",
+            "status": "rejected",
             "verified": True,
+            "eligible": False,
+            "approval_type": "REJECTED",
             "verified_salary": f"₹{verified_salary:,.0f}",
             "emi": f"₹{emi:,.0f}",
             "emi_to_salary_ratio": f"{emi_to_salary_ratio:.1f}%",
-            "message": f"EMI exceeds 50% of salary. Maximum eligible amount: ₹{max_amount:,.0f}",
+            "message": f"❌ LOAN REJECTED: Your monthly EMI of ₹{emi:,.0f} would be {emi_to_salary_ratio:.1f}% of your verified salary (₹{verified_salary:,.0f}), which exceeds our maximum limit of 50%. Maximum eligible loan amount: ₹{max_amount:,.0f}",
             "can_proceed": False,
             "max_eligible_amount": f"₹{max_amount:,.0f}",
-            "suggestion": "Please reduce the loan amount or increase the tenure to lower EMI."
+            "suggestion": f"You can apply for up to ₹{max_amount:,.0f}, or increase your tenure to reduce EMI.",
+            "reason": "EMI exceeds 50% of verified salary - fails affordability criteria"
         }
 
 
@@ -640,6 +838,15 @@ def approve_loan(customer_id: str, tool_context: ToolContext) -> dict:
         dict: Loan approval details
     """
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # CRITICAL: Check if application has been rejected
+    application_status = tool_context.state.get("application_status", "")
+    if application_status == "REJECTED":
+        rejection_reason = tool_context.state.get("rejection_reason", "Eligibility criteria not met")
+        return {
+            "status": "error",
+            "message": f"❌ Cannot approve: Application was REJECTED. Reason: {rejection_reason}"
+        }
     
     # Verify all required checks are complete
     kyc_verified = tool_context.state.get("kyc_verified", False)
@@ -658,9 +865,15 @@ def approve_loan(customer_id: str, tool_context: ToolContext) -> dict:
     
     # If conditional approval, verify salary slip was checked
     if approval_type == "CONDITIONAL":
-        salary_verified = tool_context.state.get("salary_verification_passed", False)
-        if not salary_verified:
-            return {"status": "error", "message": "Salary slip verification pending or failed"}
+        salary_verification_passed = tool_context.state.get("salary_verification_passed", None)
+        
+        # If salary verification hasn't been done yet
+        if salary_verification_passed is None:
+            return {"status": "error", "message": "Salary slip verification required but not completed"}
+        
+        # If salary verification failed (EMI > 50%)
+        if salary_verification_passed == False:
+            return {"status": "error", "message": "Salary verification failed: EMI exceeds 50% of verified salary"}
     
     # Get loan application details
     loan_application = tool_context.state.get("loan_application", {})
@@ -823,9 +1036,12 @@ underwriting_agent = Agent(
        - Score 700-749: Good creditworthiness - Standard rates  
        - Score < 700: REJECT - Explain with empathy
 
-    2. **Loan Amount Eligibility Rules**
+    2. **Loan Amount Eligibility Rules** ⚠️ CRITICAL
        - Amount <= Pre-approved limit: INSTANT APPROVAL ✓
-       - Amount <= 2x Pre-approved limit: CONDITIONAL (require salary slip)
+       - Amount <= 2x Pre-approved limit: CONDITIONAL - **MUST REQUEST SALARY SLIP UPLOAD**
+         → Tell Master Agent: "Salary slip verification required. Customer must upload document."
+         → DO NOT calculate EMI with registered salary
+         → Wait for salary slip upload and verification
        - Amount > 2x Pre-approved limit: REJECT - Suggest lower amount
 
     3. **EMI Affordability Assessment** (for conditional approvals)

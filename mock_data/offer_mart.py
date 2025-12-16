@@ -224,7 +224,7 @@ def check_loan_eligibility(customer_id: str, requested_amount: float, monthly_sa
     Check if customer is eligible for the requested loan amount
     Rules:
     - If amount <= pre_approved_limit: Instant approval
-    - If amount <= 2x pre_approved_limit: Need salary slip, EMI should be <= 50% of salary
+    - If amount <= 2x pre_approved_limit: Need salary slip verification, will check EMI after salary verification
     - If amount > 2x pre_approved_limit: Reject
     """
     offer = LOAN_OFFERS.get(customer_id)
@@ -237,7 +237,7 @@ def check_loan_eligibility(customer_id: str, requested_amount: float, monthly_sa
     
     pre_approved_limit = offer["pre_approved_amount"]
     
-    # Calculate EMI for maximum tenure
+    # Calculate EMI for requested tenure
     max_tenure = offer["max_tenure_months"]
     interest_rate = offer["interest_rate"]
     emi_details = calculate_emi(requested_amount, interest_rate, max_tenure)
@@ -245,40 +245,35 @@ def check_loan_eligibility(customer_id: str, requested_amount: float, monthly_sa
     
     # Rule 1: Within pre-approved limit - instant approval
     if requested_amount <= pre_approved_limit:
-        return {
+        result = {
             "status": "success",
             "eligible": True,
             "approval_type": "INSTANT",
             "message": f"Congratulations! Your loan of ₹{requested_amount:,.0f} is within your pre-approved limit. Instant approval available.",
             "emi_details": emi_details,
-            "documents_required": ["None - Pre-approved"]
+            "documents_required": ["None - Pre-approved"],
+            "pre_approved_limit": pre_approved_limit
         }
+        # Only add EMI ratio if salary is provided
+        if monthly_salary:
+            result["emi_to_salary_ratio"] = round((emi / monthly_salary) * 100, 2)
+        return result
     
-    # Rule 2: Up to 2x pre-approved limit - need salary slip
+    # Rule 2: Up to 2x pre-approved limit - need salary slip verification
     elif requested_amount <= 2 * pre_approved_limit:
-        # Check if EMI is <= 50% of salary
-        emi_to_salary_ratio = (emi / monthly_salary) * 100
-        
-        if emi_to_salary_ratio <= 50:
-            return {
-                "status": "success",
-                "eligible": True,
-                "approval_type": "CONDITIONAL",
-                "message": f"Your loan of ₹{requested_amount:,.0f} exceeds pre-approved limit but is within extended limit. Salary slip verification required.",
-                "emi_details": emi_details,
-                "emi_to_salary_ratio": round(emi_to_salary_ratio, 2),
-                "documents_required": ["Salary Slip (last 3 months)", "Bank Statement (last 6 months)"]
-            }
-        else:
-            return {
-                "status": "success",
-                "eligible": False,
-                "approval_type": "REJECTED",
-                "message": f"EMI of ₹{emi:,.0f} exceeds 50% of your monthly salary (₹{monthly_salary:,.0f}). Please request a lower amount.",
-                "emi_details": emi_details,
-                "emi_to_salary_ratio": round(emi_to_salary_ratio, 2),
-                "max_eligible_amount": calculate_max_eligible_amount(monthly_salary, interest_rate, max_tenure)
-            }
+        # Mark as conditional - EMI check will happen after salary slip verification
+        return {
+            "status": "success",
+            "eligible": True,
+            "approval_type": "CONDITIONAL",
+            "action_required": "SALARY_SLIP_UPLOAD",
+            "message": f"⚠️ CONDITIONAL APPROVAL: Loan amount ₹{requested_amount:,.0f} exceeds your pre-approved limit of ₹{pre_approved_limit:,.0f}. You MUST upload a salary slip to proceed. Do NOT show EMI calculations using registered salary.",
+            "user_message": f"To proceed with ₹{requested_amount:,.0f}, I'll need to verify your current salary. Could you please upload your latest salary slip (last 1-3 months) in PDF or image format?",
+            "emi_details": emi_details,
+            "documents_required": ["Salary Slip (last 3 months) - PDF or Image format"],
+            "pre_approved_limit": pre_approved_limit,
+            "note": "⚠️ IMPORTANT: EMI must be ≤ 50% of VERIFIED salary (not registered salary) for approval. Request document upload BEFORE calculating or showing EMI."
+        }
     
     # Rule 3: More than 2x pre-approved limit - reject
     else:
@@ -287,9 +282,10 @@ def check_loan_eligibility(customer_id: str, requested_amount: float, monthly_sa
             "status": "success",
             "eligible": False,
             "approval_type": "REJECTED",
-            "message": f"Requested amount ₹{requested_amount:,.0f} exceeds maximum allowed limit of ₹{max_allowed:,.0f} (2x pre-approved limit).",
+            "message": f"Requested amount ₹{requested_amount:,.0f} exceeds maximum allowed limit of ₹{max_allowed:,.0f} (2x your pre-approved limit of ₹{pre_approved_limit:,.0f}).",
             "max_allowed_amount": max_allowed,
-            "pre_approved_limit": pre_approved_limit
+            "pre_approved_limit": pre_approved_limit,
+            "suggestion": f"Please request an amount up to ₹{max_allowed:,.0f} to proceed with your application."
         }
 
 
